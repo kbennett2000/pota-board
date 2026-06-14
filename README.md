@@ -16,14 +16,14 @@ cp .env.example .env        # adjust PORT / HamLog vars if you want
 docker compose up -d --build
 ```
 
-Open `http://<server-ip>:8055/`. Set your callsign via the ⚙ gear (it's stored
+Open `http://<server-ip>:8075/`. Set your callsign via the ⚙ gear (it's stored
 in your browser, not the repo).
 
 ### Without Docker
 
 ```bash
 npm install
-npm start          # serves on PORT (default 8055)
+npm start          # serves on PORT (default 8075)
 ```
 
 ## Features

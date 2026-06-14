@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PORT = Number(process.env.PORT) || 8055;
+const PORT = Number(process.env.PORT) || 8075;
 
 const app = express();
 app.disable('x-powered-by');

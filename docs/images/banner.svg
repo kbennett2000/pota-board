@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320" role="img" aria-label="pota-board — self-hosted Parks on the Air spot board">
+  <defs>
+    <radialGradient id="glow" cx="22%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#0f1a14"/>
+      <stop offset="100%" stop-color="#0a0d0c"/>
+    </radialGradient>
+    <linearGradient id="title" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6df3a0"/>
+      <stop offset="100%" stop-color="#34c172"/>
+    </linearGradient>
+    <style>
+      .mono { font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .sans { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    </style>
+  </defs>
+
+  <!-- panel -->
+  <rect width="1280" height="320" rx="16" fill="url(#glow)"/>
+  <rect x="1" y="1" width="1278" height="318" rx="15" fill="none" stroke="#1c2a22" stroke-width="2"/>
+
+  <!-- band-scope waveform motif -->
+  <path fill="none" stroke="#4ee787" stroke-width="2.5" opacity="0.22"
+    d="M40,250 Q77.5,226 115,250 Q152.5,274 190,250 Q227.5,226 265,250 Q302.5,274 340,250
+       Q377.5,226 415,250 Q452.5,274 490,250 Q527.5,226 565,250 Q602.5,274 640,250
+       Q677.5,226 715,250 Q752.5,274 790,250 Q827.5,226 865,250 Q902.5,274 940,250
+       Q977.5,226 1015,250 Q1052.5,274 1090,250 Q1127.5,226 1165,250 Q1202.5,274 1240,250"/>
+  <!-- an "active spot" spike on the trace -->
+  <path fill="none" stroke="#f5b13d" stroke-width="2.5" opacity="0.85"
+    d="M865,250 L878,250 L888,196 L898,250 L912,250"/>
+  <circle cx="888" cy="196" r="5" fill="#f5b13d"/>
+
+  <!-- scattered "parks on the map" dots -->
+  <circle cx="1040" cy="120" r="6" fill="#4ee787" opacity="0.9"/>
+  <circle cx="1110" cy="170" r="5" fill="#4ee787" opacity="0.6"/>
+  <circle cx="980"  cy="180" r="4" fill="#c9b16a" opacity="0.7"/>
+  <circle cx="1160" cy="110" r="4" fill="#4ee787" opacity="0.45"/>
+
+  <!-- corner ticks (rig-panel framing) -->
+  <g stroke="#2f8f5b" stroke-width="3" opacity="0.7">
+    <path d="M40,40 h26 M40,40 v26" fill="none"/>
+    <path d="M1240,40 h-26 M1240,40 v26" fill="none"/>
+    <path d="M40,280 h26 M40,280 v-26" fill="none"/>
+    <path d="M1240,280 h-26 M1240,280 v-26" fill="none"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="78" y="158" class="mono" font-size="90" font-weight="700" fill="url(#title)"
+    style="letter-spacing:-2px">pota-board</text>
+  <rect x="82" y="178" width="300" height="3" rx="1.5" fill="#4ee787" opacity="0.6"/>
+
+  <!-- subtitle + tagline -->
+  <text x="84" y="222" class="sans" font-size="27" fill="#9fb2a8">Self-hosted Parks on the Air spot board</text>
+  <text x="84" y="256" class="sans" font-size="18" fill="#5f7268" style="letter-spacing:0.5px">live spots &#183; park maps &#183; optional HamLog logging &#183; runs in Docker</text>
+</svg>

@@ -1,86 +1,107 @@
-# pota-board
+<p align="center">
+  <img src="docs/images/banner.svg" alt="pota-board — self-hosted Parks on the Air spot board" width="100%">
+</p>
 
-A self-hosted [Parks on the Air](https://pota.app) spotting dashboard — the
-whole UI is one self-contained HTML file, served over your LAN in a small
-container. Live spot board with the same filters as pota.app (band, mode,
-program, QRT, hunted), per-spot mini-maps, an overview map, operator profiles,
-local-time handling, light/dark, re-spot, and self-spot.
+<p align="center">
+  A self-hosted <a href="https://parksontheair.com/">Parks on the Air</a> spotting
+  dashboard you run on your own computer.<br>
+  Live spot board, maps, operator profiles, one-click re-spotting, and optional
+  logging — all in one small app.
+</p>
 
-Optionally integrates with a local [HamLog](https://github.com/kbennett2000/HamLog)
-instance to log contacts and backfill your POTA Hunter Log.
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-4ee787" alt="MIT license">
+  <img src="https://img.shields.io/badge/runs%20in-Docker-2496ED" alt="Runs in Docker">
+  <img src="https://img.shields.io/badge/no%20build%20step-vanilla%20JS-f5b13d" alt="Vanilla JS">
+</p>
 
-## Run it (LAN, Docker)
+![The pota-board dashboard](docs/screenshots/01-board-dark.png)
 
-```bash
-cp .env.example .env        # adjust PORT / HamLog vars if you want
-docker compose up -d --build
-```
+---
 
-Open `http://<server-ip>:8075/`. Set your callsign via the ⚙ gear (it's stored
-in your browser, not the repo).
+## 🚀 Set it up in a few minutes
 
-### Without Docker
+You don't need to be technical. Pick your computer and follow the guide — each one is
+written step-by-step, no experience assumed:
 
-```bash
-npm install
-npm start          # serves on PORT (default 8075)
-```
+| | Guide |
+|---|---|
+| 🪟 **Windows** | **[Install on Windows →](docs/install/windows.md)** |
+| 🍎 **macOS** | **[Install on macOS →](docs/install/macos.md)** |
+| 🐧 **Linux** | **[Install on Linux →](docs/install/linux.md)** |
 
-## Features
+In short: install **Docker**, download this project, run **`docker compose up -d`**,
+and open **http://localhost:8075**. That's it.
 
-- **Spot board** with live filter dropdowns + counts, sorting, auto-refresh.
-- **Maps:** per-spot mini-maps with hover preview and a zoomable modal; a
-  collapsible overview map of everything on the board.
-- **Operator profiles** on callsign hover (POTA stats).
-- **Re-spot** an activator you've hunted, and **Add Spot** to self-spot at a park
-  you're activating. Both post to POTA's public spot API.
-- **Light/dark**, UTC + local clocks, reduced-motion friendly.
+> Prefer to run it directly with Node.js instead of Docker?
+> See **[Run without Docker](docs/install/without-docker.md)**.
 
-POTA's public API is read and written directly from the browser (it's CORS-open
-and the spot endpoint is unauthenticated), so the core dashboard needs no backend
-beyond static serving.
+---
 
-## HamLog integration
+## 📡 What you can do
 
-Built in phases via Claude Code — see `docs/CLAUDE-CODE-KICKOFF.md`. The server
-grows a small same-origin `/api` proxy that holds the HamLog JWT server-side
-(your HamLog credentials never reach the browser), enabling:
+A quick tour — the full walkthrough is in the **[usage guide](docs/usage.md)**.
 
-- opt-in "log this contact to HamLog" on re-spot, and
-- backfilling your POTA **Hunter Log** into HamLog via ADIF.
+**See who's on the air, live.** A self-refreshing board of every activator currently
+spotted — callsign, frequency, mode, park, comments, and how long ago they were
+heard. Fresh spots glow; old ones fade.
 
-See `docs/HAMLOG-INTEGRATION.md` for the HamLog API shapes and data formats.
+**Filter to exactly what you want.** One-tap pills for band, mode, region, QRT, and
+"hide parks I've already worked," each showing live counts.
 
-## Hunter Log → ADIF (backfill tool)
+![Filters](docs/screenshots/03-filters.png)
 
-POTA's Hunter Log page has no clean export. Copy the page, save it, and convert:
+**See where every park is.** Each spot has a mini-map; hover for a preview, click for
+a full zoomable map, or open the **overview map** to see the whole board at once.
 
-```bash
-python3 scripts/hunterlog_to_adif.py data/private/hunter-log.txt \
-    -o data/private/hunter-log.adi --my-call AE9S
-```
+![Overview map](docs/screenshots/07-overview-map.png)
 
-Then import the `.adi` into HamLog. **Back up HamLog first** — writes are
-load-bearing. HamLog de-dupes on import (same call + time-to-the-minute + band +
-mode), so re-importing an overlapping file won't create exact-duplicate contacts;
-duplicates are skipped. See `docs/HAMLOG-INTEGRATION.md` for the exact dedup key
-and the n-fer caveat.
+**Know who you're working.** Hover any callsign for that operator's POTA profile —
+parks, activations, contacts, and awards.
 
-## Layout
+![Operator profile](docs/screenshots/05-operator-card.png)
 
-```
-public/index.html   the dashboard (single file)
-src/server.js       Express static server; /api proxy mounts here
-scripts/            hunterlog_to_adif.py + synthetic test fixtures
-docs/               Claude Code kickoff prompt + HamLog integration notes
-data/private/       your gitignored operating data (Hunter Log, ADIF, backups)
-```
+**Re-spot and self-spot.** Bump a fading activator back up the list with one click,
+or post your own spot when *you're* the one at the park. Both post straight to the
+POTA network — no login required.
+
+![Re-spot window](docs/screenshots/09-respot-modal.png)
+
+**Make it yours.** Dark or light theme, adjustable refresh rate, satellite/dark map
+styles, your callsign for hunted-tracking — all saved in your browser.
+
+---
+
+## 📓 Optional: log your contacts to HamLog
+
+If you keep a logbook with **[HamLog](https://github.com/kbennett2000/HamLog)** — a
+free, self-hosted ham radio logbook by the same author — pota-board can log the parks
+you hunt straight into it. When connected, the re-spot window gains an opt-in
+**"Also log this contact to HamLog"** checkbox.
+
+It's entirely optional, off by default, and deliberately careful with your log. Full
+details (and how to connect it) are in the **[HamLog guide](docs/hamlog.md)**.
+
+---
+
+## 🛠️ Under the hood
+
+- The whole dashboard is a **single self-contained HTML file** (`public/index.html`)
+  — vanilla JavaScript, no framework, no build step.
+- A tiny **Node/Express** server (`src/server.js`) serves it and provides the small,
+  same-origin `/api/hamlog` proxy so your HamLog password never reaches the browser.
+- Spot data comes straight from **[pota.app](https://pota.app)**'s public API.
+- Ships as one small Docker image on port **8075**.
+
+Developer notes live in [`docs/HAMLOG-INTEGRATION.md`](docs/HAMLOG-INTEGRATION.md).
+The doc screenshots are generated from synthetic data — see
+[`scripts/screenshots/`](scripts/screenshots/).
 
 ## License
 
-MIT — see `LICENSE`.
+MIT — see [`LICENSE`](LICENSE).
 
 ## Credits
 
 Spot data and park info from [pota.app](https://pota.app). Maps © OpenStreetMap
-contributors, © CARTO, © Esri. Built for AE9S's LAN; shared in the POTA spirit.
+contributors, © CARTO, © Esri. Built in the POTA spirit — 73!

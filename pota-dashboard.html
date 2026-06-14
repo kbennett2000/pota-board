@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>POTA Dashboard — AE9S</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0d0c; --panel:#121715; --panel-2:#171f1b; --line:#21302a;
+    --phos:#4ee787; --phos-dim:#2f8f5b; --amber:#f5b13d;
+    --text:#cfe6d8; --muted:#7b9489; --faint:#475750; --red:#ff6b6b;
+    --ctl:#0e1311; --inset:#0c100e; --head:#10160f; --head2:#0c110f; --hover:#16201b;
+    --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  }
+  body.light{
+    --bg:#eef2ee; --panel:#ffffff; --panel-2:#f7faf7; --line:#d7e0da;
+    --phos:#1f9d57; --phos-dim:#3aa869; --amber:#b9740c;
+    --text:#16201b; --muted:#566b62; --faint:#9aa9a1; --red:#c0392b;
+    --ctl:#eef3ef; --inset:#f4f8f4; --head:#f2f7f2; --head2:#e9efe9; --hover:#e6ede8;
+  }
+  *{box-sizing:border-box}
+  body.theming, body.theming *{transition:background-color .35s ease, color .35s ease, border-color .35s ease, box-shadow .35s ease !important}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg); color:var(--text); font-family:var(--mono); font-size:15px; line-height:1.4; -webkit-font-smoothing:antialiased}
+  a{color:inherit; text-decoration:none}
+
+  header{position:sticky; top:0; z-index:1200; background:linear-gradient(180deg,var(--head),var(--head2));
+    border-bottom:1px solid var(--line); box-shadow:0 1px 0 rgba(78,231,135,.07),0 8px 24px rgba(0,0,0,.5); padding:12px 18px}
+  .hwrap{display:flex; align-items:center; gap:16px; flex-wrap:wrap; max-width:1500px; margin:0 auto}
+  .brand{display:flex; align-items:baseline; gap:12px}
+  .call{font-weight:700; font-size:20px; letter-spacing:.06em; color:var(--phos); text-shadow:0 0 14px rgba(78,231,135,.35)}
+  .title{font-family:var(--sans); font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:var(--muted)}
+
+  /* interactive filter pills */
+  .filters{display:flex; gap:8px; flex-wrap:wrap}
+  .fdrop{position:relative}
+  .fpill{display:flex; align-items:center; gap:7px; font-family:var(--sans); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    padding:5px 9px; border:1px solid var(--line); border-radius:6px; color:var(--muted); background:var(--ctl); cursor:pointer}
+  .fpill:hover{border-color:var(--phos-dim)}
+  .fpill.on{border-color:var(--phos-dim); color:var(--phos); box-shadow:inset 0 0 12px rgba(78,231,135,.08)}
+  .fpill b{color:var(--text); font-weight:700; text-transform:none; font-family:var(--mono); font-size:12px}
+  .fpill.on b{color:var(--phos)}
+  .fpill .car{font-style:normal; font-size:9px; color:var(--faint); transition:transform .15s; display:inline-block}
+  .fdrop.open .car{transform:rotate(180deg)}
+  .cbadge{font-family:var(--mono); font-size:10px; font-weight:600; color:#0a0d0c; background:var(--phos-dim); border-radius:9px; padding:1px 7px; min-width:18px; text-align:center}
+  .fpill.on .cbadge{background:var(--phos)}
+  .fmenu{position:absolute; top:calc(100% + 5px); left:0; z-index:40; min-width:178px; max-height:340px; overflow:auto;
+    background:var(--ctl); border:1px solid var(--line); border-radius:8px; box-shadow:0 16px 40px rgba(0,0,0,.6); padding:5px;
+    opacity:0; visibility:hidden; transform:translateY(-6px) scale(.98); transform-origin:top center; pointer-events:none;
+    transition:opacity .15s ease, transform .17s cubic-bezier(.2,.8,.2,1), visibility 0s linear .15s}
+  .fdrop.open .fmenu{opacity:1; visibility:visible; transform:none; pointer-events:auto; transition:opacity .15s ease, transform .17s cubic-bezier(.2,.8,.2,1)}
+  .fopt{display:flex; justify-content:space-between; align-items:center; gap:16px; width:100%; text-align:left;
+    font-family:var(--sans); font-size:13px; color:var(--text); background:none; border:none; padding:7px 9px; border-radius:6px; cursor:pointer; transition:background .12s ease}
+  .fopt:hover{background:var(--hover)}
+  .fopt.sel{background:rgba(47,143,91,.2); color:var(--phos)}
+  .fopt .cbadge{background:var(--line); color:var(--muted)}
+  .fopt.sel .cbadge{background:var(--phos-dim); color:#0a0d0c}
+
+  .spacer{flex:1}
+  .readout{font-family:var(--sans); display:flex; gap:18px; align-items:center}
+  .ro{display:flex; flex-direction:column; align-items:flex-end; line-height:1.25}
+  .ro .lab{font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--faint)}
+  .ro .val{font-family:var(--mono); font-size:15px; color:var(--text); font-variant-numeric:tabular-nums}
+  .ro .val.amber{color:var(--amber)}
+  .gear{background:var(--ctl); border:1px solid var(--line); color:var(--muted); width:34px; height:34px; border-radius:6px;
+    cursor:pointer; font-size:16px; display:grid; place-items:center; transition:.15s}
+  .gear:hover{color:var(--phos); border-color:var(--phos-dim)}
+  .gear:focus-visible{outline:2px solid var(--phos); outline-offset:2px}
+  .addspot{width:auto; padding:0 12px; gap:5px; font-family:var(--sans); font-size:12.5px; font-weight:600; letter-spacing:.02em;
+    color:var(--phos); border-color:var(--phos-dim); background:linear-gradient(180deg,rgba(78,231,135,.08),transparent)}
+  .addspot:hover{background:rgba(78,231,135,.14); color:var(--phos)}
+  body.light .addspot{color:var(--phos); background:rgba(31,157,87,.08)}
+
+  .settings{max-width:1500px; margin:0 auto; overflow:hidden; max-height:0; transition:max-height .25s ease}
+  .settings.open{max-height:460px}
+  .sbox{margin-top:12px; padding:14px 16px; background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .field label{display:block; font-family:var(--sans); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px}
+  .field .hint{font-family:var(--sans); font-size:11px; color:var(--faint); margin-top:5px; line-height:1.45}
+  .field input{width:100%; background:var(--inset); border:1px solid var(--line); color:var(--text); font-family:var(--mono); font-size:13px; padding:8px 10px; border-radius:5px}
+  .field input:focus{outline:none; border-color:var(--phos-dim); box-shadow:0 0 0 2px rgba(47,143,91,.18)}
+  .note{font-family:var(--sans); font-size:11.5px; color:var(--muted); line-height:1.5; grid-column:1/-1; border-top:1px solid var(--line); padding-top:11px}
+  .note b{color:var(--phos)} .note code{color:var(--phos)}
+
+  main{max-width:1500px; margin:0 auto; padding:18px}
+  .bar{display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap; margin:0 2px 16px}
+  .statusline{font-family:var(--sans); font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .statusline .dot{width:7px; height:7px; border-radius:50%; background:var(--phos); box-shadow:0 0 8px var(--phos)}
+  .statusline .dot.err{background:var(--red); box-shadow:0 0 8px var(--red)}
+  .statusline .dot.load{background:var(--amber); box-shadow:0 0 8px var(--amber); animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:.25}}
+  .sortctl{display:flex; align-items:center; gap:8px; font-family:var(--sans)}
+  .sortctl .slab{font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--faint)}
+  .sortctl select{appearance:none; background:var(--ctl) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%237b9489' stroke-width='1.6'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 9px center;
+    border:1px solid var(--line); color:var(--text); font-family:var(--mono); font-size:12.5px; padding:6px 26px 6px 10px; border-radius:6px; cursor:pointer}
+  .sortctl select:hover{border-color:var(--phos-dim)}
+  .sortctl select:focus{outline:none; border-color:var(--phos-dim); box-shadow:0 0 0 2px rgba(47,143,91,.18)}
+  .dirbtn{background:var(--ctl); border:1px solid var(--line); color:var(--phos); font-family:var(--mono); font-size:14px; width:32px; height:30px; border-radius:6px; cursor:pointer; display:grid; place-items:center}
+  .dirbtn:hover{border-color:var(--phos-dim)}
+  .zoomval{min-width:16px; text-align:center; color:var(--text); font-family:var(--mono); font-size:13px; font-variant-numeric:tabular-nums}
+
+  .hovermap{position:fixed; z-index:1300; width:320px; height:320px; border-radius:10px; overflow:hidden; border:1px solid var(--phos-dim); box-shadow:0 20px 55px rgba(0,0,0,.65); background:var(--inset);
+    opacity:0; visibility:hidden; transform:translateY(8px) scale(.96); transform-origin:center; pointer-events:none;
+    transition:opacity .18s ease, transform .22s cubic-bezier(.2,.8,.2,1), visibility 0s linear .18s}
+  .hovermap.show{opacity:1; visibility:visible; transform:translateY(0) scale(1); transition:opacity .18s ease, transform .22s cubic-bezier(.2,.8,.2,1)}
+  .hovermap .hm-tiles{position:absolute; inset:0}
+  .hovermap .mt{position:absolute; width:256px; height:256px; filter:saturate(1.05)}
+  .hovermap .pin{position:absolute; left:50%; top:50%; width:14px; height:14px; transform:translate(-50%,-50%); z-index:2}
+  .hovermap .pin::before{content:""; position:absolute; inset:0; border-radius:50%; background:var(--amber); box-shadow:0 0 0 2px rgba(10,13,12,.95),0 0 12px 3px var(--amber)}
+  .hovermap .hm-cap{position:absolute; left:0; right:0; bottom:0; z-index:3; padding:7px 10px; font-family:var(--sans); font-size:12px; color:#eafff2; background:linear-gradient(0deg,rgba(8,11,10,.92),rgba(8,11,10,0)); display:flex; justify-content:space-between; gap:8px; align-items:flex-end}
+  .hovermap .hm-cap b{color:var(--phos); font-family:var(--mono)} .hovermap .hm-cap .hz{color:var(--faint); font-size:10.5px; white-space:nowrap}
+
+  /* overview map */
+  .overview{margin:0 2px 16px; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--panel)}
+  .ov-head{display:flex; justify-content:space-between; align-items:center; padding:9px 13px; background:var(--head); border-bottom:1px solid var(--line)}
+  .ov-title{font-family:var(--sans); font-size:12.5px; color:var(--muted)} .ov-title b{color:var(--phos); font-family:var(--mono); font-size:14px}
+  .ov-sub{color:var(--faint)}
+  .ov-tools{display:flex; gap:8px}
+  .ovbtn{background:var(--ctl); border:1px solid var(--line); color:var(--muted); font-family:var(--sans); font-size:12px; padding:5px 10px; border-radius:6px; cursor:pointer}
+  .ovbtn:hover{color:var(--phos); border-color:var(--phos-dim)}
+  .ov-map{height:300px; position:relative; transition:height .25s ease; background:var(--inset)}
+  .overview.collapsed .ov-map{height:0}
+  .overview.collapsed .ov-head{border-bottom:none}
+  .ov-loading{position:absolute; inset:0; display:grid; place-items:center; font-family:var(--sans); font-size:12px; color:var(--faint)}
+  .spot.flash{animation:cardflash 1.4s ease-out}
+  @keyframes cardflash{0%{box-shadow:0 0 0 2px var(--phos),0 0 26px rgba(78,231,135,.55)} 100%{box-shadow:0 0 0 0 transparent}}
+
+  .grid{display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+  @keyframes spotin{from{opacity:0; transform:translateY(12px)} to{opacity:1; transform:none}}
+  .spot{background:linear-gradient(180deg,var(--panel-2),var(--panel)); border:1px solid var(--line); border-radius:9px; padding:13px 15px 12px; position:relative;
+    transition:border-color .2s ease, transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s ease}
+  .spot:hover{border-color:var(--phos-dim); transform:translateY(-3px); box-shadow:0 10px 30px rgba(0,0,0,.35), 0 0 0 1px rgba(78,231,135,.08)}
+  body.light .spot:hover{box-shadow:0 10px 28px rgba(31,157,87,.14)}
+  .spot::before{content:""; position:absolute; left:0; top:11px; bottom:11px; width:2px; border-radius:2px; background:var(--age,var(--faint)); box-shadow:0 0 8px var(--age,transparent)}
+  .row1{display:flex; justify-content:space-between; align-items:baseline; gap:8px}
+  .scall{font-size:19px; font-weight:700; letter-spacing:.03em; color:var(--text); cursor:help; border-bottom:1px dotted transparent}
+  .scall:hover{color:var(--phos); border-bottom-color:var(--phos-dim)}
+  .opcard{position:fixed; z-index:1400; width:272px; background:var(--ctl); border:1px solid var(--phos-dim); border-radius:10px; box-shadow:0 18px 50px rgba(0,0,0,.65); padding:12px; font-family:var(--sans); pointer-events:none;
+    opacity:0; visibility:hidden; transform:translateY(8px) scale(.97); transform-origin:top left;
+    transition:opacity .18s ease, transform .22s cubic-bezier(.2,.8,.2,1), visibility 0s linear .18s}
+  .opcard.show{opacity:1; visibility:visible; transform:translateY(0) scale(1); transition:opacity .18s ease, transform .22s cubic-bezier(.2,.8,.2,1)}
+  .op-load{font-size:12.5px; color:var(--muted); padding:3px 2px}
+  .op-top{display:flex; gap:11px; align-items:center}
+  .op-av{width:48px; height:48px; border-radius:8px; object-fit:cover; border:1px solid var(--line); background:var(--inset); flex:0 0 auto}
+  .op-name{font-family:var(--mono); font-size:15px; font-weight:600; color:var(--phos); line-height:1.2}
+  .op-sub{font-size:11.5px; color:var(--muted); margin-top:3px}
+  .op-stats{display:flex; gap:18px; margin-top:11px; padding-top:10px; border-top:1px solid var(--line)}
+  .op-col{display:flex; flex-direction:column; gap:2px; font-size:11.5px; color:var(--text); font-variant-numeric:tabular-nums}
+  .op-h{font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin-bottom:2px}
+  .op-col b{color:var(--amber); font-weight:600; font-family:var(--mono)}
+  .op-foot{margin-top:9px; font-size:11px; color:var(--muted)}
+  .op-foot b{color:var(--text); font-family:var(--mono)}
+  .age{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--age,var(--muted)); font-variant-numeric:tabular-nums; white-space:nowrap}
+  .age .adot{width:7px; height:7px; border-radius:50%; background:var(--age,var(--faint)); box-shadow:0 0 7px var(--age,transparent)}
+  .age.fresh .adot{animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .freqrow{display:flex; align-items:baseline; gap:10px; margin:9px 0 9px}
+  .freq{font-size:24px; font-weight:600; color:var(--amber); font-variant-numeric:tabular-nums; text-shadow:0 0 18px rgba(245,177,61,.25)}
+  .freq .khz{font-size:12px; color:var(--faint); margin-left:3px; letter-spacing:.05em}
+  .mode{font-family:var(--sans); font-size:10px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--phos); border:1px solid var(--phos-dim); padding:2px 7px; border-radius:4px}
+  .body{display:flex; gap:12px; align-items:stretch}
+  .info{flex:1; min-width:0; display:flex; flex-direction:column}
+  .park{font-size:13px; color:var(--text)} .park .ref{color:var(--phos); font-weight:600} .park .nm{color:var(--muted)}
+  .loc{font-family:var(--sans); font-size:11px; letter-spacing:.06em; color:var(--muted); margin-top:3px}
+  .cmt{font-size:12.5px; color:var(--muted); margin:8px 0 0; word-break:break-word} .cmt.empty{color:var(--faint); font-style:italic}
+  .foot{margin-top:auto; padding-top:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11.5px; color:var(--muted)}
+  .de span{color:var(--faint)} .meta{display:flex; gap:10px; align-items:center; color:var(--faint); font-variant-numeric:tabular-nums}
+
+  .map{flex:0 0 132px; width:132px; aspect-ratio:1; border-radius:7px; overflow:hidden; position:relative; padding:0; border:1px solid var(--line); background:var(--inset); display:block; cursor:zoom-in;
+    transition:border-color .2s ease, box-shadow .25s ease, transform .25s cubic-bezier(.2,.8,.2,1)}
+  .map:hover{border-color:var(--phos); transform:scale(1.04); box-shadow:0 8px 22px rgba(0,0,0,.4)}
+  .map:focus-visible{outline:2px solid var(--phos); outline-offset:2px}
+  .map .mt{position:absolute; width:256px; height:256px; filter:saturate(1.05); transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+  .map:hover .mt{transform:scale(1.12)}
+  .map .zhint{transition:opacity .2s ease, transform .2s ease; opacity:.75}
+  .map:hover .zhint{opacity:1; transform:scale(1.12)}
+  .map .pin{position:absolute; left:50%; top:50%; width:12px; height:12px; transform:translate(-50%,-50%); z-index:2; pointer-events:none}
+  .map .pin::before{content:""; position:absolute; inset:0; border-radius:50%; background:var(--amber); box-shadow:0 0 0 2px rgba(10,13,12,.95),0 0 10px 2px var(--amber)}
+  .map .pin::after{content:""; position:absolute; inset:-6px; border-radius:50%; border:1px solid var(--amber); opacity:.5; animation:ping 2.4s ease-out infinite}
+  @keyframes ping{0%{transform:scale(.5);opacity:.7}100%{transform:scale(1.6);opacity:0}}
+  .map .zhint{position:absolute; right:4px; bottom:4px; z-index:3; font-family:var(--sans); font-size:13px; color:#fff; background:rgba(10,13,12,.6); border-radius:4px; width:18px; height:18px; display:grid; place-items:center; pointer-events:none}
+  .map .mfail{position:absolute; inset:0; display:none; place-items:center; font-family:var(--sans); font-size:10px; color:var(--faint); text-align:center; padding:6px}
+  .map.failed .mt,.map.failed .pin,.map.failed .zhint{display:none} .map.failed .mfail{display:grid}
+
+  .empty-state,.err-state{grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--muted); font-family:var(--sans)}
+  .empty-state b,.err-state b{display:block; color:var(--text); font-size:16px; margin-bottom:6px; font-family:var(--mono)} .err-state b{color:var(--red)}
+  .err-state button{margin-top:14px; background:var(--ctl); border:1px solid var(--line); color:var(--phos); font-family:var(--mono); padding:8px 16px; border-radius:6px; cursor:pointer}
+  .attrib{max-width:1500px; margin:18px auto 0; padding:0 18px; font-family:var(--sans); font-size:10.5px; color:var(--faint); text-align:right} .attrib a{color:var(--muted)}
+
+  .heard{font-family:var(--sans); font-size:11px; color:var(--muted); margin-top:8px}
+  .heard b{color:var(--text); font-weight:600; font-variant-numeric:tabular-nums}
+  .respotbtn{font-family:var(--sans); font-size:10.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--phos);
+    background:var(--ctl); border:1px solid var(--phos-dim); padding:3px 9px; border-radius:5px; cursor:pointer}
+  .respotbtn:hover{background:var(--phos-dim); color:var(--bg)}
+  body.light .respotbtn:hover{color:#fff}
+
+  .modal{position:fixed; inset:0; z-index:2000; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s ease, visibility 0s linear .2s}
+  .modal.open{opacity:1; visibility:visible; pointer-events:auto; transition:opacity .2s ease}
+  .modal-back{position:absolute; inset:0; background:rgba(4,6,5,.72); backdrop-filter:blur(3px)}
+  body.light .modal-back{background:rgba(40,55,48,.32)}
+  .modal-panel{position:absolute; inset:5vh 5vw; background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 30px 80px rgba(0,0,0,.6);
+    transform:scale(.965); transform-origin:center; transition:transform .24s cubic-bezier(.2,.8,.2,1)}
+  .modal.open .modal-panel{transform:scale(1)}
+  .modal-bar{display:flex; align-items:center; gap:14px; padding:11px 15px; border-bottom:1px solid var(--line); background:var(--head)}
+  .modal-title{font-weight:600; color:var(--phos)} .modal-title span{color:var(--muted); font-weight:400; font-size:13px; margin-left:8px; font-family:var(--sans)}
+  .modal-osm{font-family:var(--sans); font-size:12px; color:var(--muted); margin-left:auto} .modal-osm:hover{color:var(--phos)}
+  .modal-x{background:var(--ctl); border:1px solid var(--line); color:var(--muted); width:30px; height:30px; border-radius:6px; cursor:pointer; font-size:14px} .modal-x:hover{color:var(--red); border-color:var(--red)}
+  .modal-body{position:relative; flex:1} #bigmap{position:absolute; inset:0; background:var(--inset)}
+  .mapfail{display:grid; place-items:center; height:100%; color:var(--muted); font-family:var(--sans)}
+
+  /* re-spot modal */
+  .spanel{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.95); width:min(560px,92vw); max-height:90vh; overflow:auto;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:0 30px 80px rgba(0,0,0,.6); display:flex; flex-direction:column;
+    transition:transform .24s cubic-bezier(.2,.8,.2,1)}
+  .modal.open .spanel{transform:translate(-50%,-50%) scale(1)}
+  .sphead{padding:14px 18px; font-family:var(--mono); font-weight:600; font-size:17px; color:var(--bg); background:var(--phos-dim)}
+  body.light .sphead{color:#fff}
+  .spbody{padding:16px 18px; display:flex; flex-direction:column; gap:13px}
+  .frow{display:flex; gap:13px; flex-wrap:wrap}
+  .frow label,.ffull{flex:1; min-width:140px; display:flex; flex-direction:column; gap:5px; font-family:var(--sans); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+  .ffull{flex-basis:100%}
+  .spbody input{background:var(--inset); border:1px solid var(--line); color:var(--text); font-family:var(--mono); font-size:14px; padding:9px 11px; border-radius:6px}
+  .spbody input:focus{outline:none; border-color:var(--phos-dim); box-shadow:0 0 0 2px rgba(47,143,91,.18)}
+  .spbody input[readonly]{color:var(--muted); background:transparent}
+  .sp-park{font-family:var(--sans); font-size:12px; color:var(--muted); margin-top:-4px}
+  .sp-notes{font-family:var(--sans); font-size:11.5px; color:var(--muted); line-height:1.55; border-top:1px solid var(--line); padding-top:11px}
+  .sp-notes b{color:var(--phos)}
+  .sp-msg{font-family:var(--sans); font-size:12.5px; min-height:1px}
+  .sp-msg.ok{color:var(--phos)} .sp-msg.err{color:var(--amber)}
+  .sp-msg a{color:var(--phos); text-decoration:underline; cursor:pointer}
+  .spfoot{display:flex; justify-content:flex-end; gap:10px; padding:13px 18px; border-top:1px solid var(--line)}
+  .sp-cancel{background:none; border:1px solid var(--line); color:var(--muted); font-family:var(--sans); font-size:13px; padding:9px 18px; border-radius:7px; cursor:pointer}
+  .sp-cancel:hover{color:var(--text)}
+  .sp-go{background:var(--phos-dim); border:1px solid var(--phos-dim); color:var(--bg); font-family:var(--sans); font-weight:600; font-size:13px; padding:9px 22px; border-radius:7px; cursor:pointer}
+  body.light .sp-go{color:#fff}
+  .sp-go:hover{background:var(--phos); border-color:var(--phos)}
+  .sp-go:disabled{opacity:.5; cursor:default}
+
+  @media (prefers-reduced-motion:reduce){ *, .theming, .theming *{animation:none !important; transition:none !important} }
+  @media (max-width:560px){ .readout{gap:12px} .ro .val{font-size:13px} .brand .title{display:none} }
+</style>
+</head>
+<body>
+<header>
+  <div class="hwrap">
+    <div class="brand"><span class="call" id="opcall">AE9S</span><span class="title">Parks on the Air</span></div>
+    <div class="filters" id="filters"></div>
+    <div class="spacer"></div>
+    <div class="readout">
+      <div class="ro"><span class="lab">Showing</span><span class="val amber" id="count">—</span></div>
+      <div class="ro"><span class="lab">UTC</span><span class="val" id="utc">--:--:--</span></div>
+      <div class="ro"><span class="lab" id="locLab">Local</span><span class="val" id="loc">--:--</span></div>
+      <div class="ro"><span class="lab">Refresh</span><span class="val" id="cd">--</span></div>
+      <button class="gear addspot" id="addspot" title="Spot yourself at a park">＋ Spot</button>
+      <button class="gear" id="theme" title="Light / dark" aria-label="Toggle light/dark">☾</button>
+      <button class="gear" id="gear" title="Settings" aria-label="Settings">⚙</button>
+    </div>
+  </div>
+  <div class="settings" id="settings">
+    <div class="sbox">
+      <div class="field">
+        <label for="callsign">Your callsign</label>
+        <input id="callsign" type="text" value="AE9S" autocomplete="off" spellcheck="false">
+        <div class="hint">Used for the Hunted filter (api.pota.app/spot/hunted/&lt;call&gt;).</div>
+      </div>
+      <div class="field">
+        <label for="interval">Refresh interval (seconds)</label>
+        <input id="interval" type="number" min="10" step="5" value="30">
+        <div class="hint">Minimum 10s — the POTA feed is a shared community service.</div>
+      </div>
+      <div class="field">
+        <label for="exCalls">Also hide these calls</label>
+        <input id="exCalls" type="text" placeholder="K4ABC, W1XYZ">
+        <label for="exRefs" style="margin-top:11px">Also hide these refs</label>
+        <input id="exRefs" type="text" placeholder="US-3845, US-4431">
+      </div>
+      <div class="field">
+        <label for="token">POTA token (optional)</label>
+        <input id="token" type="password" placeholder="leave blank — not needed" autocomplete="off">
+        <div class="hint">Re-spotting posts straight to the live POTA network — <b>no login or token required</b>, it just works. Only paste a Bearer token here (from a signed-in pota.app session) in the unlikely event POTA starts rejecting anonymous spots.</div>
+      </div>
+      <div class="note">
+        <b>Band, Mode, Program, QRT &amp; Hunted</b> are the dropdowns up top — click any pill to change it. Counts next to each option are live from the current spot feed. Tap any park map for a zoom/pan view.
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="bar">
+    <div class="statusline"><span class="dot load" id="sdot"></span><span id="status">Loading spots…</span></div>
+    <div class="sortctl">
+      <span class="slab">Sort</span>
+      <select id="sortField" aria-label="Sort field">
+        <option value="time">Time</option><option value="activator">Activator</option>
+        <option value="freq">Frequency</option><option value="mode">Mode</option>
+        <option value="reference">Reference</option><option value="park">Park Name</option>
+        <option value="region">Region</option><option value="spotter">Spotter</option>
+      </select>
+      <button class="dirbtn" id="sortDir" aria-label="Sort direction">↑</button>
+      <span class="slab" style="margin-left:8px">Map</span>
+      <select id="basemap" aria-label="Basemap style"><option value="color">Color</option><option value="satellite">Satellite</option><option value="dark">Dark</option></select>
+      <span class="slab" style="margin-left:8px">Zoom</span>
+      <button class="dirbtn" id="zoomOut" aria-label="Zoom out">−</button>
+      <span id="zoomVal" class="zoomval">6</span>
+      <button class="dirbtn" id="zoomIn" aria-label="Zoom in">+</button>
+    </div>
+  </div>
+  <section class="overview" id="overview">
+    <div class="ov-head">
+      <span class="ov-title">On the air now · <b id="ovCount">0</b><span class="ov-sub"> parks on the board</span></span>
+      <div class="ov-tools"><button class="ovbtn" id="ovFit" title="Zoom to fit all parks">⤢ Fit</button><button class="ovbtn" id="ovToggle" title="Collapse / expand">▾</button></div>
+    </div>
+    <div class="ov-map" id="ovMap"><div class="ov-loading" id="ovLoading">Loading overview map…</div></div>
+  </section>
+  <div class="grid" id="grid"></div>
+</main>
+<div class="attrib">park maps © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>, © <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> · spots from <a href="https://pota.app" target="_blank" rel="noopener">pota.app</a></div>
+
+<div class="hovermap" id="hoverMap"><div class="hm-tiles" id="hmTiles"></div><span class="pin"></span><div class="hm-cap" id="hmCap"></div></div>
+<div class="opcard" id="opCard"></div>
+<div class="modal" id="spotModal" aria-hidden="true">
+  <div class="modal-back" id="spotBack"></div>
+  <div class="spanel">
+    <div class="sphead" id="spHead">Re-Spot</div>
+    <div class="spbody">
+      <div class="frow">
+        <label>Activator callsign<input id="spActivator" readonly></label>
+        <label>Spotter callsign<input id="spSpotter" autocomplete="off"></label>
+      </div>
+      <div class="frow">
+        <label>Frequency (kHz)<input id="spFreq" inputmode="decimal"></label>
+        <label>Park reference<input id="spRef" readonly></label>
+      </div>
+      <label class="ffull">Mode<input id="spModeInput" autocomplete="off" placeholder="SSB"></label>
+      <div class="sp-park" id="spPark"></div>
+      <label class="ffull">Comments<input id="spComments" placeholder="optional"></label>
+      <div class="sp-notes">
+        <p><b>Wrong mode?</b> Mention a mode in Comments to change it for this spot (e.g. "QSY CW", "Switching to FT8").</p>
+        <p><b>Mention QRT</b> if this activator is no longer on the air, to mark this spot finished.</p>
+        <p>This spot will be <b>marked hunted</b> for this band and mode.</p>
+      </div>
+      <div class="sp-msg" id="spMsg"></div>
+    </div>
+    <div class="spfoot">
+      <button class="sp-cancel" id="spCancel">Cancel</button>
+      <button class="sp-go" id="spGo">Spot</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="mapModal" aria-hidden="true">
+  <div class="modal-back" id="modalBack"></div>
+  <div class="modal-panel">
+    <div class="modal-bar"><span class="modal-title" id="modalTitle"></span><a class="modal-osm" id="modalOsm" target="_blank" rel="noopener">OpenStreetMap ↗</a><button class="modal-x" id="modalX" aria-label="Close map">✕</button></div>
+    <div class="modal-body" id="mapModalBody"></div>
+  </div>
+</div>
+
+<script>
+const SPOTS="https://api.pota.app/spot/activator";
+const HUNTED=c=>`https://api.pota.app/spot/hunted/${encodeURIComponent(c)}`;
+const MAP_PX=132, HOVER_PX=320;
+const BANDS=[["160M",1800,2000],["80M",3500,4000],["60M",5250,5450],["40M",7000,7300],["30M",10100,10150],
+  ["20M",14000,14350],["17M",18068,18168],["15M",21000,21450],["12M",24890,24990],["10M",28000,29700],
+  ["6M",50000,54000],["2M",144000,148000],["70CM",420000,450000]];
+const MODE_PHONE=new Set(["SSB","USB","LSB","AM","FM","FMN","DV","DIGITALVOICE","C4FM","DMR","FUSION","P25","NXDN","PHONE"]);
+const MODE_DATA =new Set(["FT8","FT4","RTTY","PSK","PSK31","PSK63","JS8","JT65","JT9","MFSK","OLIVIA","DOMINOEX","HELL","THOR","SSTV","PACKET","ARDOP","VARA","JT6M","DIGITAL","DATA"]);
+
+const el=id=>document.getElementById(id);
+let lastGood=[], spots=[], countdown=0;
+const huntedIds=new Set(), huntedAR=new Set();
+const cfg={ call:"AE9S", band:"20M", mode:"PHONE", program:"us+ca", qrt:"hide", hunted:"hide",
+  interval:30, exCalls:[], exRefs:[], sortField:"freq", sortDir:"asc", basemap:"color", mapZoom:6, overviewOpen:true, theme:"dark", token:"" };
+
+const store={ get(k){try{return localStorage.getItem(k);}catch(e){return null;}}, set(k,v){try{localStorage.setItem(k,v);}catch(e){}} };
+const baseCall=c=>(c||"").toUpperCase().split("/").sort((a,b)=>b.length-a.length)[0]||"";
+const arKey=s=>baseCall(s.activator)+"|"+(s.reference||"").toUpperCase();
+const upMode=s=>(s.mode||"").toUpperCase().trim();
+const progOf=s=>(s.locationDesc||"").split("-")[0].split(",")[0].trim().toUpperCase();
+function bandOf(f){ for(const [n,lo,hi] of BANDS) if(f>=lo&&f<=hi) return n; return null; }
+
+function ageColor(s){ if(s<60)return{c:"#4ee787",fresh:true}; if(s<300)return{c:"#7bd49a",fresh:false}; if(s<900)return{c:"#b9a14a",fresh:false}; if(s<1800)return{c:"#8a7440",fresh:false}; return{c:"#5a5a5a",fresh:false}; }
+const fmtAge=s=>s<60?s+"s":s<3600?Math.floor(s/60)+"m":Math.floor(s/3600)+"h "+Math.floor((s%3600)/60)+"m";
+const utcHHMM=d=>String(d.getUTCHours()).padStart(2,"0")+":"+String(d.getUTCMinutes()).padStart(2,"0");
+const toMs=t=>!t?0:Date.parse(/[zZ]|[+\-]\d\d:?\d\d$/.test(t)?t:t+"Z");
+const localTime=ms=>new Date(ms).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+const TZ=(()=>{ try{ return new Intl.DateTimeFormat([], {timeZoneName:"short"}).formatToParts(new Date()).find(p=>p.type==="timeZoneName")?.value||""; }catch(e){ return ""; } })();
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function project(lon,lat,z){ const s=256*2**z; const x=(lon+180)/360*s; const sin=Math.sin(lat*Math.PI/180); const y=(0.5-Math.log((1+sin)/(1-sin))/(4*Math.PI))*s; return {x,y}; }
+function tileURL(x,y,z){
+  if(cfg.basemap==="satellite") return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+  if(cfg.basemap==="dark")      return `https://a.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}@2x.png`;
+  return `https://a.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}@2x.png`;
+}
+function tilesFor(lon,lat,V,z){
+  const T=256, n=2**z; const {x:wx,y:wy}=project(lon,lat,z); const ox=wx-V/2, oy=wy-V/2;
+  const i0=Math.floor(ox/T), i1=Math.floor((ox+V)/T), j0=Math.floor(oy/T), j1=Math.floor((oy+V)/T);
+  let out="";
+  for(let i=i0;i<=i1;i++) for(let j=j0;j<=j1;j++){ if(j<0||j>=n) continue;
+    const tx=((i%n)+n)%n, left=Math.round(i*T-ox), top=Math.round(j*T-oy);
+    out+=`<img class="mt" loading="lazy" alt="" style="left:${left}px;top:${top}px" src="${tileURL(tx,j,z)}" onerror="this.closest('.map')&&this.closest('.map').classList.add('failed')">`; }
+  return out;
+}
+
+/* ---- filtering ---- */
+function isHunted(s){ return huntedIds.has(s.spotId) || huntedAR.has(arKey(s)); }
+function modeMatch(m,sel){ m=(m||"").toUpperCase().trim();
+  if(sel==="ALL") return true; if(sel==="PHONE") return MODE_PHONE.has(m); if(sel==="DATA") return MODE_DATA.has(m); if(sel==="CW") return m==="CW"; return m===sel; }
+function inProgram(s){ const p=progOf(s);
+  if(cfg.program==="all") return true; if(cfg.program==="us+ca") return p==="US"||p==="CA"; return p===cfg.program; }
+function passes(s){
+  if(cfg.band!=="ALL" && bandOf(parseFloat(s.frequency))!==cfg.band) return false;
+  if(!modeMatch(s.mode,cfg.mode)) return false;
+  if(!inProgram(s)) return false;
+  if(cfg.qrt==="hide" && (s.comments||"").toUpperCase().includes("QRT")) return false;
+  if(cfg.hunted==="hide" && isHunted(s)) return false;
+  if(cfg.exCalls.includes(baseCall(s.activator))) return false;
+  if(cfg.exRefs.includes((s.reference||"").toUpperCase())) return false;
+  return true;
+}
+function dedupe(list){ const m=new Map();
+  for(const s of list){ const k=arKey(s), t=toMs(s.spotTime), cur=m.get(k); if(!cur||t>cur._t){ s._t=t; m.set(k,s); } }
+  return [...m.values()];
+}
+function cmp(a,b){ let r=0;
+  switch(cfg.sortField){
+    case "time": r=a._t-b._t; break;
+    case "freq": r=parseFloat(a.frequency)-parseFloat(b.frequency); break;
+    case "activator": r=(a.activator||"").localeCompare(b.activator||""); break;
+    case "mode": r=upMode(a).localeCompare(upMode(b)); break;
+    case "reference": r=(a.reference||"").localeCompare(b.reference||"",undefined,{numeric:true}); break;
+    case "park": r=(a.name||a.parkName||"").localeCompare(b.name||b.parkName||""); break;
+    case "region": r=(a.locationDesc||"").localeCompare(b.locationDesc||""); break;
+    case "spotter": r=(a.spotter||"").localeCompare(b.spotter||""); break;
+  }
+  if(r===0) r=a._t-b._t; return cfg.sortDir==="asc"? r : -r;
+}
+
+/* ---- facet dropdowns ---- */
+const FILTERS=[{key:"band",label:"Band"},{key:"mode",label:"Mode"},{key:"program",label:"Program"},{key:"qrt",label:"QRT"},{key:"hunted",label:"Hunted"}];
+let openFilter=null;
+function facetOptions(key,pool){
+  if(key==="band"){
+    const c=new Map(); for(const s of pool){ const b=bandOf(parseFloat(s.frequency)); if(b) c.set(b,(c.get(b)||0)+1); }
+    const o=[{v:"ALL",l:"All",n:pool.length}];
+    for(const [b] of BANDS) if(c.has(b)) o.push({v:b,l:b,n:c.get(b)});
+    if(cfg.band!=="ALL"&&!c.has(cfg.band)) o.push({v:cfg.band,l:cfg.band,n:0}); return o;
+  }
+  if(key==="mode"){
+    const g=new Map(); let ph=0,da=0; for(const s of pool){ const m=upMode(s)||"?"; g.set(m,(g.get(m)||0)+1); if(MODE_PHONE.has(m))ph++; else if(MODE_DATA.has(m))da++; }
+    const o=[{v:"ALL",l:"All",n:pool.length}];
+    [...g.keys()].sort().forEach(m=>o.push({v:m,l:m,n:g.get(m)}));
+    if(da) o.push({v:"DATA",l:"Data",n:da}); if(ph) o.push({v:"PHONE",l:"Phone",n:ph});
+    if(cfg.mode!=="ALL"&&!o.some(x=>x.v===cfg.mode)) o.push({v:cfg.mode,l:cfg.mode,n:0}); return o;
+  }
+  if(key==="program"){
+    const c=new Map(); for(const s of pool){ const p=progOf(s); if(p) c.set(p,(c.get(p)||0)+1); }
+    const us=c.get("US")||0, ca=c.get("CA")||0;
+    const o=[{v:"all",l:"All",n:pool.length},{v:"us+ca",l:"US + CA",n:us+ca}];
+    [...c.keys()].sort().forEach(p=>o.push({v:p,l:p,n:c.get(p)}));
+    if(!o.some(x=>x.v===cfg.program)) o.push({v:cfg.program,l:cfg.program.toUpperCase(),n:0}); return o;
+  }
+  if(key==="qrt"){ let q=0; for(const s of pool) if((s.comments||"").toUpperCase().includes("QRT")) q++;
+    return [{v:"show",l:"Show",n:pool.length},{v:"hide",l:"Hide",n:pool.length-q}]; }
+  if(key==="hunted"){ let h=0; for(const s of pool) if(isHunted(s)) h++;
+    return [{v:"show",l:"Show",n:pool.length},{v:"hide",l:"Hide",n:pool.length-h}]; }
+}
+function selDisplay(key){
+  if(key==="band") return cfg.band==="ALL"?"All":cfg.band;
+  if(key==="mode") return cfg.mode==="ALL"?"All":cfg.mode==="PHONE"?"Phone":cfg.mode==="DATA"?"Data":cfg.mode;
+  if(key==="program") return cfg.program==="all"?"All":cfg.program==="us+ca"?"US+CA":cfg.program.toUpperCase();
+  if(key==="qrt") return cfg.qrt==="hide"?"Hidden":"Shown";
+  if(key==="hunted") return cfg.hunted==="hide"?"Hidden":"Shown";
+}
+const curVal=key=>cfg[key];
+function isActive(key){ if(key==="band")return cfg.band!=="ALL"; if(key==="mode")return cfg.mode!=="ALL"; if(key==="program")return cfg.program!=="all"; if(key==="qrt")return cfg.qrt==="hide"; if(key==="hunted")return cfg.hunted==="hide"; }
+function renderFilters(pool){
+  el("filters").innerHTML=FILTERS.map(f=>{
+    const opts=facetOptions(f.key,pool);
+    const cv=String(curVal(f.key)).toUpperCase();
+    const selOpt=opts.find(o=>String(o.v).toUpperCase()===cv);
+    const badge=selOpt?selOpt.n:0;
+    const menu=opts.map(o=>`<button class="fopt${String(o.v).toUpperCase()===cv?' sel':''}" data-key="${f.key}" data-val="${esc(String(o.v))}">${esc(o.l)}<span class="cbadge">${o.n}</span></button>`).join("");
+    return `<div class="fdrop${openFilter===f.key?' open':''}" data-key="${f.key}">
+      <button class="fpill${isActive(f.key)?' on':''}" data-key="${f.key}">${f.label} <b>${esc(selDisplay(f.key))}</b><span class="cbadge">${badge}</span><i class="car">▾</i></button>
+      <div class="fmenu">${menu}</div></div>`;
+  }).join("");
+}
+function pickFilter(key,val){
+  cfg[key]=val; store.set("pota_"+key,val);
+  if(key==="hunted"){ countdown=0; load(); } else recompute();
+}
+el("filters").addEventListener("click", e=>{
+  const pill=e.target.closest(".fpill");
+  if(pill){ const k=pill.dataset.key; openFilter=(openFilter===k)?null:k; syncOpen(); e.stopPropagation(); return; }
+  const opt=e.target.closest(".fopt");
+  if(opt){ pickFilter(opt.dataset.key, opt.dataset.val); openFilter=null; e.stopPropagation(); return; }
+  if(e.target.closest(".fmenu")) e.stopPropagation();
+});
+function syncOpen(){ document.querySelectorAll(".fdrop").forEach(d=>d.classList.toggle("open", d.dataset.key===openFilter)); }
+document.addEventListener("click", ()=>{ if(openFilter){ openFilter=null; syncOpen(); } });
+
+/* ---- compute / render ---- */
+function compute(){ const pool=dedupe(lastGood); renderFilters(pool); return pool.filter(passes).sort(cmp); }
+function recompute(){ spots=compute(); render(); updateOverview(); }
+
+async function load(){
+  el("sdot").className="dot load"; el("status").textContent="Refreshing…";
+  const jobs=[ fetch(SPOTS,{cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject(new Error("spots HTTP "+r.status))) ];
+  jobs.push( cfg.call ? fetch(HUNTED(cfg.call),{cache:"no-store"}).then(r=>r.ok?r.json():[]).catch(()=>null) : Promise.resolve([]) );
+  try{
+    const [data,hunted]=await Promise.all(jobs);
+    lastGood=data; huntedIds.clear(); huntedAR.clear();
+    if(Array.isArray(hunted)) for(const s of hunted){ if(s.spotId!=null) huntedIds.add(s.spotId); if(s.activator&&s.reference) huntedAR.add(arKey(s)); }
+    recompute(); ensureOverview();
+    el("sdot").className="dot";
+    el("status").textContent=`${data.length} on feed · ${spots.length} showing · ${utcHHMM(new Date())} UTC`;
+  }catch(e){
+    el("sdot").className="dot err";
+    el("status").textContent=`Couldn't reach the POTA feed (${e.message}). Showing last good data; retrying.`;
+    if(!lastGood.length) el("grid").innerHTML=`<div class="err-state"><b>Lost the feed</b>${esc(e.message)} — the POTA API may be down, or this page is offline.<br><button onclick="load()">Try again</button></div>`;
+  }
+  countdown=cfg.interval;
+}
+
+let painted=false;
+function render(){
+  const g=el("grid"); el("count").textContent=spots.length;
+  if(!spots.length){ g.innerHTML=`<div class="empty-state"><b>Nothing matches right now</b>No spots fit these filters — widen Band, Mode, or Program, or wait for the next refresh.</div>`; return; }
+  const now=Date.now(); const anim=!painted; painted=true;
+  g.innerHTML=spots.map((s,i)=>{
+    const sec=Math.max(0,Math.round((now-s._t)/1000)), a=ageColor(sec);
+    const cmt=(s.comments||"").trim(), name=(s.name||s.parkName||"").trim();
+    const respot=(s.count&&s.count>1)?`×${s.count}`:"";
+    const entr=anim?`;animation:spotin .42s cubic-bezier(.2,.8,.2,1) both;animation-delay:${Math.min(i*26,440)}ms`:"";
+    let map="";
+    if(typeof s.latitude==="number" && typeof s.longitude==="number"){
+      map=`<button class="map" type="button" data-lat="${s.latitude}" data-lon="${s.longitude}" data-ref="${esc(s.reference)}" data-name="${esc(name)}" title="Open ${esc(s.reference)} — zoom & pan">
+        ${tilesFor(s.longitude,s.latitude,MAP_PX,cfg.mapZoom)}<span class="pin"></span><span class="zhint">⤢</span><span class="mfail">${esc(s.grid6||s.locationDesc||"map offline")}</span></button>`;
+    }
+    return `<article class="spot" style="--age:${a.c}${entr}" data-t="${s._t}" data-id="${s.spotId}">
+      <div class="row1"><span class="scall" data-call="${esc(s.activator)}">${esc(s.activator)}</span><span class="age ${a.fresh?'fresh':''}"><span class="adot"></span><span class="agev">${fmtAge(sec)}</span></span></div>
+      <div class="freqrow"><span class="freq">${esc(s.frequency)}<span class="khz">kHz</span></span><span class="mode">${esc(s.mode||'—')}</span></div>
+      <div class="body"><div class="info">
+        <div class="park"><a class="ref" href="https://pota.app/#/park/${esc(s.reference)}" target="_blank" rel="noopener">${esc(s.reference)}</a>${name?`<span class="nm"> · ${esc(name)}</span>`:""}</div>
+        <div class="loc">${esc(s.locationDesc||'')}</div>
+        <div class="cmt ${cmt?'':'empty'}">${cmt?esc(cmt):'no spot info'}</div>
+        <div class="heard" title="${utcHHMM(new Date(s._t))} UTC">Last heard <b class="hage">${fmtAge(sec)}</b> ago · <b>${localTime(s._t)}</b> ${TZ}</div>
+        <div class="foot"><span class="de"><span>de</span> ${esc(s.spotter||'—')}</span><span class="meta">${respot?`<span>${respot} spots</span>`:""}<button class="respotbtn" data-act="${esc(s.activator)}" data-freq="${esc(s.frequency)}" data-ref="${esc(s.reference)}" data-name="${esc(name)}" data-mode="${esc(s.mode||'')}">Re-spot</button></span></div>
+      </div>${map}</div></article>`;
+  }).join("");
+}
+
+function tick(){
+  const now=new Date();
+  el("utc").textContent=now.toISOString().slice(11,19);
+  el("loc").textContent=localTime(now.getTime())+(TZ?" "+TZ:"");
+  countdown=Math.max(0,countdown-1); el("cd").textContent=countdown+"s";
+  const nowMs=now.getTime();
+  document.querySelectorAll(".spot").forEach(card=>{ const sec=Math.max(0,Math.round((nowMs-(+card.dataset.t))/1000)), a=ageColor(sec);
+    card.style.setProperty("--age",a.c); card.querySelector(".age").classList.toggle("fresh",a.fresh);
+    card.querySelector(".agev").textContent=fmtAge(sec); const h=card.querySelector(".hage"); if(h) h.textContent=fmtAge(sec); });
+  if(countdown<=0) load();
+}
+
+/* ---- leaflet (modal + overview) ---- */
+let leafletP=null, modalMap=null;
+function ensureLeaflet(){ if(window.L) return Promise.resolve(); if(leafletP) return leafletP;
+  leafletP=new Promise((res,rej)=>{ const css=document.createElement("link"); css.rel="stylesheet"; css.href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"; document.head.appendChild(css);
+    const js=document.createElement("script"); js.src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"; js.onload=()=>res(); js.onerror=()=>rej(new Error("leaflet")); document.head.appendChild(js); });
+  return leafletP;
+}
+function leafletLayer(bm){ const sub={subdomains:"abcd",maxZoom:19};
+  if(bm==="satellite") return L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"© Esri"});
+  if(bm==="dark") return L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",{...sub,attribution:"© OSM, © CARTO"});
+  return L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",{...sub,attribution:"© OSM, © CARTO"});
+}
+async function openMap(d){
+  const lat=+d.lat, lon=+d.lon;
+  el("modalTitle").innerHTML=`${esc(d.ref)}${d.name?`<span>${esc(d.name)}</span>`:""}`;
+  el("modalOsm").href=`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=13/${lat}/${lon}`;
+  el("mapModal").classList.add("open"); el("mapModal").setAttribute("aria-hidden","false");
+  try{ await ensureLeaflet(); }catch(e){ el("mapModalBody").innerHTML='<div class="mapfail">Couldn’t load the map library — are you offline?</div>'; return; }
+  if(modalMap){ modalMap.remove(); modalMap=null; }
+  el("mapModalBody").innerHTML='<div id="bigmap"></div>';
+  const map=L.map("bigmap",{scrollWheelZoom:true,zoomControl:true}).setView([lat,lon],12); modalMap=map;
+  const layers={ "Color":leafletLayer("color"), "Satellite":leafletLayer("satellite"), "Dark":leafletLayer("dark") };
+  (cfg.basemap==="satellite"?layers.Satellite:cfg.basemap==="dark"?layers.Dark:layers.Color).addTo(map);
+  L.control.layers(layers,null,{collapsed:true}).addTo(map);
+  L.circleMarker([lat,lon],{radius:8,color:"#f5b13d",weight:2,fillColor:"#f5b13d",fillOpacity:.55}).addTo(map).bindPopup(`<b>${esc(d.ref)}</b>${d.name?"<br>"+esc(d.name):""}`).openPopup();
+  setTimeout(()=>map.invalidateSize(),60);
+}
+function closeMap(){ el("mapModal").classList.remove("open"); el("mapModal").setAttribute("aria-hidden","true"); if(modalMap){ modalMap.remove(); modalMap=null; } }
+el("grid").addEventListener("click", e=>{ const m=e.target.closest(".map"); if(m && !m.classList.contains("failed")) openMap(m.dataset);
+  const rb=e.target.closest(".respotbtn"); if(rb) openSpot(rb.dataset); });
+el("modalBack").addEventListener("click", closeMap); el("modalX").addEventListener("click", closeMap);
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeMap(); closeSpot(); } });
+
+/* ---- spot (re-spot an activator, or self-spot at a park) ---- */
+function openSpot(d){ // re-spot: activator + reference fixed from the card
+  el("spHead").textContent="Re-Spot";
+  el("spActivator").value=d.act||""; el("spActivator").readOnly=true;
+  el("spSpotter").value=cfg.call||"";
+  el("spFreq").value=d.freq||"";
+  el("spRef").value=d.ref||""; el("spRef").readOnly=true; el("spRef").placeholder="";
+  el("spModeInput").value=d.mode||"";
+  el("spPark").textContent=d.name||""; el("spPark").hidden=false;
+  prepSpot(false);
+}
+function openSelfSpot(){ // self-spot: you, the activator, at a park you choose
+  el("spHead").textContent="Add Spot";
+  el("spActivator").value=cfg.call||""; el("spActivator").readOnly=false;
+  el("spSpotter").value=cfg.call||"";
+  el("spFreq").value="";
+  el("spRef").value=""; el("spRef").readOnly=false; el("spRef").placeholder="Example: US-1234";
+  el("spModeInput").value="SSB";
+  el("spPark").textContent=""; el("spPark").hidden=true;
+  prepSpot(true);
+}
+function prepSpot(self){
+  el("spComments").value="";
+  el("spMsg").className="sp-msg"; el("spMsg").innerHTML="";
+  el("spGo").disabled=false; el("spGo").textContent="Spot";
+  el("spotModal").classList.add("open"); el("spotModal").setAttribute("aria-hidden","false");
+  const first=self?el("spActivator"):el("spFreq");
+  setTimeout(()=>{ try{ first.focus(); first.select&&first.select(); }catch(e){} },50);
+}
+function closeSpot(){ el("spotModal").classList.remove("open"); el("spotModal").setAttribute("aria-hidden","true"); }
+function spMsg(html,cls){ const m=el("spMsg"); m.className="sp-msg"+(cls?" "+cls:""); m.innerHTML=html; }
+function spFallback(){ return ` <a id="spOpen" href="https://pota.app/" target="_blank" rel="noopener">Open pota.app ↗</a>`; }
+async function submitSpot(){
+  const payload={ activator:(el("spActivator").value||"").toUpperCase(), spotter:(el("spSpotter").value||"").toUpperCase(),
+    frequency:String(el("spFreq").value||"").trim(), reference:(el("spRef").value||"").toUpperCase(),
+    mode:(el("spModeInput").value||"").trim().toUpperCase()||"SSB", source:"Web", comments:(el("spComments").value||"").trim() };
+  if(!payload.activator||!payload.frequency||!payload.reference){ spMsg("Activator, frequency and reference are required.","err"); return; }
+  if(!payload.spotter){ spMsg("Enter your callsign as the spotter.","err"); return; }
+  el("spGo").disabled=true; spMsg("Posting spot to the POTA network…");
+  try{
+    const headers={"Content-Type":"application/json"};
+    if(cfg.token) headers["Authorization"]="Bearer "+cfg.token.replace(/^Bearer\s+/i,"");
+    const r=await fetch("https://api.pota.app/spot/",{method:"POST",headers,body:JSON.stringify(payload)});
+    if(r.ok){ spMsg(`✓ Spotted ${payload.activator} on ${payload.frequency} kHz.`,"ok"); el("spGo").textContent="Done"; countdown=Math.min(countdown,3); setTimeout(closeSpot,1400); }
+    else if(r.status===401||r.status===403){ spMsg(`POTA needs a valid login token (got ${r.status}). Add/refresh your token in Settings, or re-spot on pota.app:`+spFallback(),"err"); el("spGo").disabled=false; }
+    else { spMsg(`POTA returned ${r.status}. You can re-spot on pota.app:`+spFallback(),"err"); el("spGo").disabled=false; }
+  }catch(e){
+    spMsg("Couldn't post from here — the POTA write API blocks cross-origin requests without a token. Re-spot on pota.app:"+spFallback(),"err");
+    el("spGo").disabled=false;
+  }
+}
+el("spCancel").addEventListener("click", closeSpot);
+el("spotBack").addEventListener("click", closeSpot);
+el("spGo").addEventListener("click", submitSpot);
+el("addspot").addEventListener("click", openSelfSpot);
+
+/* hover preview */
+let hoverCur=null;
+function showHover(btn){ const d=btn.dataset, hm=el("hoverMap"), W=HOVER_PX, H=HOVER_PX, gap=10;
+  el("hmTiles").innerHTML=tilesFor(+d.lon,+d.lat,W,cfg.mapZoom);
+  el("hmCap").innerHTML=`<span><b>${esc(d.ref)}</b>${d.name?" · "+esc(d.name):""}</span><span class="hz">click to zoom</span>`;
+  const r=btn.getBoundingClientRect(); let left=r.right+gap; if(left+W>innerWidth-6) left=r.left-gap-W; if(left<6) left=6;
+  let top=r.top+r.height/2-H/2; top=Math.max(6,Math.min(top,innerHeight-H-6)); hm.style.left=left+"px"; hm.style.top=top+"px"; hm.classList.add("show"); }
+function hideHover(){ hoverCur=null; el("hoverMap").classList.remove("show"); }
+
+/* operator profile card (api.pota.app/stats/user/<call>) */
+let opCur=null; const opCache=new Map();
+const onum=n=>(n==null?0:n).toLocaleString();
+function opCardHTML(call,d){
+  if(d==="loading"||d===undefined) return `<div class="op-load">Looking up ${esc(call)}…</div>`;
+  if(!d) return `<div class="op-load">No POTA profile found for ${esc(call)}</div>`;
+  const av=d.gravatar?`https://www.gravatar.com/avatar/${esc(d.gravatar)}?s=96&d=identicon`:`https://www.gravatar.com/avatar/?d=identicon&f=y`;
+  const A=d.activator||{}, H=d.hunter||{};
+  return `<div class="op-top">
+      <img class="op-av" src="${av}" alt="" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'">
+      <div class="op-id"><div class="op-name">${esc(d.name||call)}</div><div class="op-sub">${esc(d.callsign||call)}${d.qth?" · "+esc(d.qth):""}</div></div>
+    </div>
+    <div class="op-stats">
+      <div class="op-col"><span class="op-h">Activator</span><span><b>${onum(A.parks)}</b> parks</span><span><b>${onum(A.activations)}</b> activations</span><span><b>${onum(A.qsos)}</b> QSOs</span></div>
+      <div class="op-col"><span class="op-h">Hunter</span><span><b>${onum(H.parks)}</b> parks</span><span><b>${onum(H.qsos)}</b> QSOs</span></div>
+    </div>
+    <div class="op-foot"><b>${onum(d.awards)}</b> awards · <b>${onum(d.endorsements)}</b> endorsements</div>`;
+}
+function positionOp(sc){ const r=sc.getBoundingClientRect(), c=el("opCard"), W=272;
+  let left=r.left; if(left+W>innerWidth-6) left=innerWidth-W-6; if(left<6) left=6;
+  let top=r.bottom+8; const Hc=c.offsetHeight||156; if(top+Hc>innerHeight-6) top=Math.max(6, r.top-Hc-8);
+  c.style.left=left+"px"; c.style.top=top+"px";
+}
+async function showOpCard(sc){
+  const call=baseCall(sc.dataset.call||sc.textContent.trim()); if(!call) return;
+  el("opCard").innerHTML=opCardHTML(call, opCache.has(call)?opCache.get(call):"loading");
+  el("opCard").classList.add("show"); positionOp(sc);
+  if(!opCache.has(call)){
+    opCache.set(call,"loading");
+    try{ const r=await fetch(`https://api.pota.app/stats/user/${encodeURIComponent(call)}`); opCache.set(call, r.ok?await r.json():null); }
+    catch(e){ opCache.set(call,null); }
+    if(opCur===sc){ el("opCard").innerHTML=opCardHTML(call,opCache.get(call)); positionOp(sc); }
+  }
+}
+function hideOpCard(){ opCur=null; el("opCard").classList.remove("show"); }
+
+el("grid").addEventListener("mouseover", e=>{
+  const mp=e.target.closest(".map"); if(mp && mp!==hoverCur && !mp.classList.contains("failed")){ hoverCur=mp; showHover(mp); }
+  const sc=e.target.closest(".scall"); if(sc && sc!==opCur){ opCur=sc; showOpCard(sc); }
+});
+el("grid").addEventListener("mouseout", e=>{
+  const mp=e.target.closest(".map"); if(mp && !mp.contains(e.relatedTarget)) hideHover();
+  const sc=e.target.closest(".scall"); if(sc && !sc.contains(e.relatedTarget)) hideOpCard();
+});
+window.addEventListener("scroll", ()=>{ if(hoverCur) hideHover(); if(opCur) hideOpCard(); }, {passive:true});
+
+/* overview map */
+let overviewMap=null, ovMarkers=null, ovBase=null, ovFitted=false;
+function initOverview(){ const l=el("ovLoading"); if(l) l.remove();
+  overviewMap=L.map("ovMap",{scrollWheelZoom:true,worldCopyJump:true,zoomControl:true}).setView([39,-98],3);
+  ovBase=leafletLayer(cfg.basemap).addTo(overviewMap); ovMarkers=L.layerGroup().addTo(overviewMap); }
+function ovPoints(){ return spots.filter(s=>typeof s.latitude==="number"&&typeof s.longitude==="number"); }
+function updateOverview(){ if(!overviewMap||!ovMarkers) return; ovMarkers.clearLayers();
+  const now=Date.now(); const latlngs=[];
+  for(const s of ovPoints()){ const sec=Math.max(0,Math.round((now-s._t)/1000)), a=ageColor(sec);
+    L.circleMarker([s.latitude,s.longitude],{radius:a.fresh?8:6,color:a.c,weight:1.5,fillColor:a.c,fillOpacity:.5})
+      .bindPopup(`<b>${esc(s.activator)}</b> · ${esc(s.frequency)} kHz<br>${esc(s.reference)}${s.name?" · "+esc(s.name):""}<br><span style="color:#777">${esc(s.mode||"")} · ${fmtAge(sec)} ago · de ${esc(s.spotter||"—")}</span>`)
+      .on("click",()=>flashCard(s.spotId)).addTo(ovMarkers); latlngs.push([s.latitude,s.longitude]); }
+  el("ovCount").textContent=spots.length;
+  if(!ovFitted && latlngs.length){ overviewMap.fitBounds(latlngs,{padding:[28,28],maxZoom:9}); ovFitted=true; } }
+function fitOverview(){ const ll=ovPoints().map(s=>[s.latitude,s.longitude]); if(overviewMap&&ll.length) overviewMap.fitBounds(ll,{padding:[28,28],maxZoom:9}); }
+function flashCard(id){ const c=document.querySelector(`.spot[data-id="${id}"]`); if(c){ c.scrollIntoView({behavior:"smooth",block:"center"}); c.classList.remove("flash"); void c.offsetWidth; c.classList.add("flash"); } }
+async function ensureOverview(){ if(overviewMap){ updateOverview(); return; } if(!cfg.overviewOpen) return;
+  try{ await ensureLeaflet(); }catch(e){ const l=el("ovLoading"); if(l) l.textContent="Map library unavailable (offline?)"; return; }
+  initOverview(); updateOverview(); setTimeout(()=>overviewMap.invalidateSize(),60); }
+el("ovFit").addEventListener("click", fitOverview);
+el("ovToggle").addEventListener("click", ()=>{ cfg.overviewOpen=!cfg.overviewOpen; store.set("pota_ovOpen",cfg.overviewOpen?"1":"0");
+  el("overview").classList.toggle("collapsed",!cfg.overviewOpen); el("ovToggle").textContent=cfg.overviewOpen?"▾":"▸";
+  if(cfg.overviewOpen) ensureOverview().then(()=>{ if(overviewMap) setTimeout(()=>overviewMap.invalidateSize(),260); }); });
+
+/* ---- other controls ---- */
+const dirArrow=()=> cfg.sortDir==="asc"?"↑":"↓";
+const defaultDir=f=> f==="time"?"desc":"asc";
+function readCfg(reload){
+  cfg.call=(el("callsign").value||"").trim().toUpperCase(); el("opcall").textContent=cfg.call||"—"; store.set("pota_call",cfg.call);
+  cfg.interval=Math.max(10,parseInt(el("interval").value)||30); store.set("pota_interval",cfg.interval);
+  cfg.exCalls=el("exCalls").value.split(",").map(x=>baseCall(x.trim())).filter(Boolean); store.set("pota_exCalls",el("exCalls").value);
+  cfg.exRefs=el("exRefs").value.split(",").map(x=>x.trim().toUpperCase()).filter(Boolean); store.set("pota_exRefs",el("exRefs").value);
+  cfg.token=(el("token").value||"").trim(); store.set("pota_token",cfg.token);
+  if(reload){ countdown=0; load(); } else recompute();
+}
+const debounce=(fn,ms)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};};
+el("callsign").addEventListener("input", debounce(()=>readCfg(true),450));
+["interval","exCalls","exRefs","token"].forEach(id=>el(id).addEventListener("input", debounce(()=>readCfg(false),350)));
+el("gear").onclick=()=>el("settings").classList.toggle("open");
+function applyTheme(){ document.body.classList.toggle("light",cfg.theme==="light"); el("theme").textContent=cfg.theme==="light"?"☀":"☾"; }
+el("theme").addEventListener("click", ()=>{ cfg.theme=cfg.theme==="light"?"dark":"light"; store.set("pota_theme",cfg.theme);
+  document.body.classList.add("theming"); applyTheme(); setTimeout(()=>document.body.classList.remove("theming"),420); });
+el("sortField").addEventListener("change", e=>{ cfg.sortField=e.target.value; cfg.sortDir=defaultDir(cfg.sortField); el("sortDir").textContent=dirArrow(); store.set("pota_sortField",cfg.sortField); store.set("pota_sortDir",cfg.sortDir); recompute(); });
+el("sortDir").addEventListener("click", ()=>{ cfg.sortDir=cfg.sortDir==="asc"?"desc":"asc"; el("sortDir").textContent=dirArrow(); store.set("pota_sortDir",cfg.sortDir); recompute(); });
+el("basemap").addEventListener("change", e=>{ cfg.basemap=e.target.value; store.set("pota_basemap",cfg.basemap); render(); if(overviewMap){ overviewMap.removeLayer(ovBase); ovBase=leafletLayer(cfg.basemap).addTo(overviewMap); ovBase.bringToBack(); } });
+function setZoom(z){ cfg.mapZoom=Math.max(3,Math.min(12,z)); el("zoomVal").textContent=cfg.mapZoom; store.set("pota_mapZoom",cfg.mapZoom); render(); }
+el("zoomOut").addEventListener("click", ()=>setZoom(cfg.mapZoom-1));
+el("zoomIn").addEventListener("click", ()=>setZoom(cfg.mapZoom+1));
+
+(function restore(){
+  const g=(k,d)=>{const v=store.get(k);return v===null?d:v;};
+  const c=store.get("pota_call"); if(c){cfg.call=c; el("callsign").value=c; el("opcall").textContent=c;}
+  const iv=store.get("pota_interval"); if(iv){cfg.interval=+iv; el("interval").value=iv;}
+  const ec=store.get("pota_exCalls"); if(ec){el("exCalls").value=ec; cfg.exCalls=ec.split(",").map(x=>baseCall(x.trim())).filter(Boolean);}
+  const er=store.get("pota_exRefs"); if(er){el("exRefs").value=er; cfg.exRefs=er.split(",").map(x=>x.trim().toUpperCase()).filter(Boolean);}
+  const tk=store.get("pota_token"); if(tk){cfg.token=tk; el("token").value=tk;}
+  cfg.theme=g("pota_theme","dark"); applyTheme();
+  cfg.band=g("pota_band","20M"); cfg.mode=g("pota_mode","PHONE"); cfg.program=g("pota_program","us+ca"); cfg.qrt=g("pota_qrt","hide"); cfg.hunted=g("pota_hunted","hide");
+  cfg.sortField=g("pota_sortField","freq"); cfg.sortDir=g("pota_sortDir","asc"); cfg.basemap=g("pota_basemap","color"); cfg.mapZoom=+g("pota_mapZoom",6);
+  cfg.overviewOpen=g("pota_ovOpen","1")!=="0";
+  el("sortField").value=cfg.sortField; el("sortDir").textContent=dirArrow(); el("basemap").value=cfg.basemap; el("zoomVal").textContent=cfg.mapZoom;
+  el("overview").classList.toggle("collapsed",!cfg.overviewOpen); el("ovToggle").textContent=cfg.overviewOpen?"▾":"▸";
+})();
+
+countdown=cfg.interval; load(); setInterval(tick,1000);
+</script>
+</body>
+</html>

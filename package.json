@@ -1,0 +1,15 @@
+{
+  "name": "pota-board",
+  "version": "1.0.0",
+  "description": "Self-hosted POTA spotting dashboard with optional HamLog integration",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

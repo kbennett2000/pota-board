@@ -1,0 +1,15 @@
+services:
+  pota-board:
+    build: .
+    container_name: pota-board
+    restart: unless-stopped
+    ports:
+      - "8055:8055"
+    environment:
+      PORT: 8055
+      # HamLog integration (read by the /api proxy once built; blank is fine until then)
+      HAMLOG_URL: ${HAMLOG_URL:-http://192.168.1.62:8050}
+      HAMLOG_USER: ${HAMLOG_USER:-}
+      HAMLOG_PASS: ${HAMLOG_PASS:-}
+    # Uncomment if you'd rather load the three HamLog vars from a .env file:
+    # env_file: .env

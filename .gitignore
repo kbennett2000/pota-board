@@ -1,0 +1,11 @@
+node_modules/
+.env
+*.log
+npm-debug.log*
+
+# Private operating data — your real Hunter Log paste, generated ADIF, DB dumps.
+# Never commit. Contains callsigns/QSOs and is yours alone.
+data/private/*
+!data/private/.gitkeep
+*.adi
+*.adif

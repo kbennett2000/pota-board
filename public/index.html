@@ -229,6 +229,8 @@
   .sp-park{font-family:var(--sans); font-size:12px; color:var(--muted); margin-top:-4px}
   .sp-notes{font-family:var(--sans); font-size:11.5px; color:var(--muted); line-height:1.55; border-top:1px solid var(--line); padding-top:11px}
   .sp-notes b{color:var(--phos)}
+  .sp-hamlog{display:flex; align-items:center; gap:9px; font-family:var(--sans); font-size:12.5px; color:var(--text); cursor:pointer; user-select:none; border-top:1px solid var(--line); padding-top:11px}
+  .sp-hamlog input{width:15px; height:15px; accent-color:var(--phos); cursor:pointer; flex:none}
   .sp-msg{font-family:var(--sans); font-size:12.5px; min-height:1px}
   .sp-msg.ok{color:var(--phos)} .sp-msg.err{color:var(--amber)}
   .sp-msg a{color:var(--phos); text-decoration:underline; cursor:pointer}
@@ -344,6 +346,7 @@
         <p><b>Mention QRT</b> if this activator is no longer on the air, to mark this spot finished.</p>
         <p>This spot will be <b>marked hunted</b> for this band and mode.</p>
       </div>
+      <label class="sp-hamlog" id="spHamlogRow" hidden><input type="checkbox" id="spLogHamlog"> Also log this contact to HamLog</label>
       <div class="sp-msg" id="spMsg"></div>
     </div>
     <div class="spfoot">
@@ -603,6 +606,20 @@ el("modalBack").addEventListener("click", closeMap); el("modalX").addEventListen
 document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeMap(); closeSpot(); } });
 
 /* ---- spot (re-spot an activator, or self-spot at a park) ---- */
+let spotSelf=false;                 // true while the Add-Spot (self-spot) modal is open
+let hamlogHealthyP=null;            // cached one-shot /api/hamlog/health probe
+const HAMLOG_PREF="potaboard.logHamlog";
+// Is the server's HamLog proxy configured + reachable? Probed at most once per page.
+function hamlogHealthy(){ return hamlogHealthyP || (hamlogHealthyP =
+  fetch("/api/hamlog/health").then(r=>r.ok).catch(()=>false)); }
+// Reveal the opt-in "log to HamLog" row only on re-spot, and only if HamLog is up.
+function setupHamlogRow(self){
+  const row=el("spHamlogRow"), box=el("spLogHamlog");
+  row.hidden=true;
+  if(self) return;                  // self-spot is you activating — never a hunter QSO
+  try{ box.checked = sessionStorage.getItem(HAMLOG_PREF)==="1"; }catch(e){ box.checked=false; }
+  hamlogHealthy().then(ok=>{ if(ok && !spotSelf) row.hidden=false; });
+}
 function openSpot(d){ // re-spot: activator + reference fixed from the card
   el("spHead").textContent="Re-Spot";
   el("spActivator").value=d.act||""; el("spActivator").readOnly=true;
@@ -624,8 +641,10 @@ function openSelfSpot(){ // self-spot: you, the activator, at a park you choose
   prepSpot(true);
 }
 function prepSpot(self){
+  spotSelf=self;
   el("spComments").value="";
   el("spMsg").className="sp-msg"; el("spMsg").innerHTML="";
+  setupHamlogRow(self);
   el("spGo").disabled=false; el("spGo").textContent="Spot";
   el("spotModal").classList.add("open"); el("spotModal").setAttribute("aria-hidden","false");
   const first=self?el("spActivator"):el("spFreq");
@@ -634,6 +653,29 @@ function prepSpot(self){
 function closeSpot(){ el("spotModal").classList.remove("open"); el("spotModal").setAttribute("aria-hidden","true"); }
 function spMsg(html,cls){ const m=el("spMsg"); m.className="sp-msg"+(cls?" "+cls:""); m.innerHTML=html; }
 function spFallback(){ return ` <a id="spOpen" href="https://pota.app/" target="_blank" rel="noopener">Open pota.app ↗</a>`; }
+// Opt-in hunter-QSO log to HamLog after a successful re-spot. The JWT stays
+// server-side; we POST same-origin to the proxy. Returns an inline status string;
+// never throws — a failed log must not break the spot. Form freq is kHz → MHz.
+async function logRespotToHamlog(payload){
+  const now=new Date();
+  const body={
+    date: now.toISOString().slice(0,10),
+    time: String(now.getUTCHours()).padStart(2,"0")+String(now.getUTCMinutes()).padStart(2,"0"),
+    callsign: payload.activator,
+    frequency: (parseFloat(payload.frequency)/1000).toFixed(3),
+    mode: payload.mode,
+    parkRef: payload.reference,
+  };
+  const band=bandOf(parseFloat(payload.frequency)); if(band) body.band=band;
+  if(payload.comments) body.notes=payload.comments;
+  try{
+    const res=await fetch("/api/hamlog/contact",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    if(res.ok) return `<br>✓ logged to HamLog.`;
+    if(res.status===409) return `<br>• already in HamLog — not logged twice.`;
+    let msg=`HTTP ${res.status}`; try{ const j=await res.json(); if(j&&j.error) msg=j.error; }catch(e){}
+    return `<br>⚠ HamLog log failed: ${esc(msg)}`;
+  }catch(e){ return `<br>⚠ HamLog log failed: couldn’t reach the server.`; }
+}
 async function submitSpot(){
   const payload={ activator:(el("spActivator").value||"").toUpperCase(), spotter:(el("spSpotter").value||"").toUpperCase(),
     frequency:String(el("spFreq").value||"").trim(), reference:(el("spRef").value||"").toUpperCase(),
@@ -645,7 +687,16 @@ async function submitSpot(){
     const headers={"Content-Type":"application/json"};
     if(cfg.token) headers["Authorization"]="Bearer "+cfg.token.replace(/^Bearer\s+/i,"");
     const r=await fetch("https://api.pota.app/spot/",{method:"POST",headers,body:JSON.stringify(payload)});
-    if(r.ok){ spMsg(`✓ Spotted ${payload.activator} on ${payload.frequency} kHz.`,"ok"); el("spGo").textContent="Done"; countdown=Math.min(countdown,3); setTimeout(closeSpot,1400); }
+    if(r.ok){
+      const base=`✓ Spotted ${payload.activator} on ${payload.frequency} kHz.`;
+      spMsg(base,"ok"); el("spGo").textContent="Done"; countdown=Math.min(countdown,3);
+      if(!spotSelf && el("spLogHamlog").checked){
+        spMsg(base+`<br>logging to HamLog…`,"ok");
+        const note=await logRespotToHamlog(payload);
+        spMsg(base+note,"ok");
+        setTimeout(closeSpot,2200);
+      } else { setTimeout(closeSpot,1400); }
+    }
     else if(r.status===401||r.status===403){ spMsg(`POTA needs a valid login token (got ${r.status}). Add/refresh your token in Settings, or re-spot on pota.app:`+spFallback(),"err"); el("spGo").disabled=false; }
     else { spMsg(`POTA returned ${r.status}. You can re-spot on pota.app:`+spFallback(),"err"); el("spGo").disabled=false; }
   }catch(e){
@@ -657,6 +708,7 @@ el("spCancel").addEventListener("click", closeSpot);
 el("spotBack").addEventListener("click", closeSpot);
 el("spGo").addEventListener("click", submitSpot);
 el("addspot").addEventListener("click", openSelfSpot);
+el("spLogHamlog").addEventListener("change", e=>{ try{ sessionStorage.setItem(HAMLOG_PREF, e.target.checked?"1":"0"); }catch(_){} });
 
 /* hover preview */
 let hoverCur=null;

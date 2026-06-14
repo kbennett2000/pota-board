@@ -14,6 +14,8 @@
 import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { createHamlogClient } from './hamlog.js';
+import { hamlogRouter } from './routes/hamlog.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 8075;
@@ -25,7 +27,14 @@ app.use(express.json({ limit: '256kb' }));
 // Liveness probe (used by docker-compose healthcheck)
 app.get('/healthz', (_req, res) => res.json({ ok: true, service: 'pota-board' }));
 
-// --- /api/* mounts here once the HamLog proxy is built (see kickoff doc) ---
+// HamLog proxy: holds the JWT server-side; browser calls same-origin /api/hamlog/*.
+// Endpoints handle the unconfigured case themselves (503), so mounting is unconditional.
+const hamlog = createHamlogClient({
+  baseUrl: process.env.HAMLOG_URL,
+  user: process.env.HAMLOG_USER,
+  pass: process.env.HAMLOG_PASS,
+});
+app.use('/api/hamlog', hamlogRouter(hamlog));
 
 // Static dashboard
 app.use(express.static(join(__dirname, '..', 'public'), { extensions: ['html'] }));

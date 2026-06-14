@@ -60,9 +60,11 @@ python3 scripts/hunterlog_to_adif.py data/private/hunter-log.txt \
     -o data/private/hunter-log.adi --my-call AE9S
 ```
 
-Then import the `.adi` into HamLog. **Back up HamLog first** — its ADIF import
-does not de-duplicate, so only import contacts you don't already have. (The Phase
-4 integration automates the "missing only" diff.)
+Then import the `.adi` into HamLog. **Back up HamLog first** — writes are
+load-bearing. HamLog de-dupes on import (same call + time-to-the-minute + band +
+mode), so re-importing an overlapping file won't create exact-duplicate contacts;
+duplicates are skipped. See `docs/HAMLOG-INTEGRATION.md` for the exact dedup key
+and the n-fer caveat.
 
 ## Layout
 

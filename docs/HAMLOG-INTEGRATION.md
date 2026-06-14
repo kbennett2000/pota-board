@@ -14,7 +14,7 @@ on 401.
 |---|---|---|---|
 | `POST` | `/qsos/` | `createQsoSchema`: `{ date, time, callsign, frequency, notes, received, sent, mode, band }` (only `date`, `callsign`, `frequency` are effectively required) | `{ id }` |
 | `POST` | `/qsos/:id/pota` | `{ parkId, qsoType }` — `parkId` is the `US-####` **reference string**; `qsoType` e.g. `"1"` | `{ id }` |
-| `POST` | `/qsos/import` | **multipart** file upload, field name `file`, ADIF body. Parses `SIG=POTA` / `SIG_INFO=<ref>` and auto-links the park | `{ imported, ids, skipped, skippedRecords }` |
+| `POST` | `/qsos/import` | **multipart** file upload, field name `file`, ADIF body. Parses `SIG=POTA` / `SIG_INFO=<ref>` and auto-links the park. De-dupes per record (see below) — duplicates are skipped, not inserted | `{ imported, ids, skipped, skippedRecords }` |
 | `GET`  | `/qsos/export` | optional `?park=US-####` | ADIF text |
 | `GET`  | `/qsos/` | optional `?callsign=` or `?park=` | `{ Contacts: [...] }` |
 | `GET`  | `/qsos/map` | `?from=&to=` | `{ markers, total }` |
@@ -23,11 +23,25 @@ on 401.
 A POTA contact = create the contact (`POST /qsos/`), then attach the park
 (`POST /qsos/:id/pota`). The import route does both in one step from ADIF.
 
-### Critical: import does not de-duplicate
-`importAdif` skips only invalid records (missing callsign/date, invalid
-callsign/frequency, insert failure). It does **not** check for existing
-contacts. Re-importing an overlapping file creates duplicates. Any backfill
-must diff against existing HamLog QSOs first.
+### Import de-dupes per record (updated)
+HamLog now de-dupes on **every** insert — manual create (`POST /qsos/`) and ADIF
+import alike route through `createContact`, which calls `findDuplicateContactId`
+and throws `DuplicateQsoError` before inserting. The import counts these as
+`skipped` with reason `"duplicate"` (alongside invalid records — missing
+callsign/date, bad callsign/frequency, insert failure). Backed by migration
+`008-add-contacts-dedup-index.sql`.
+
+The dedup key is **`user_id` + `UPPER(callsign)` + `qso_datetime_utc` to the
+minute + null-safe `band` + null-safe `mode`** — it does **not** include the park.
+So re-importing an overlapping file no longer creates exact-duplicate contacts; a
+client-side diff against existing QSOs is now optional defense-in-depth /
+reconciliation, not a correctness requirement. **Still back up before any bulk
+import** — writes are load-bearing.
+
+Caveat for n-fers: because the key omits the park, two records with the same
+call+time+band+mode but different parks collapse — the second is treated as a
+duplicate Contact and skipped, so its extra park link isn't created. Worth knowing
+when reconciling Hunter Log n-fers.
 
 ### CORS
 HamLog enables CORS only when `CORS_ORIGIN` is set (no `*` default). Because the

@@ -64,10 +64,13 @@ documented in `docs/HAMLOG-INTEGRATION.md`. Read it before touching the integrat
 
 HamLog holds real QSO history. Treat writes as load-bearing.
 
-- **HamLog's ADIF import does NOT de-duplicate.** It only skips invalid records
-  (missing call/date, bad callsign/freq) — it will happily insert a contact that
-  already exists. Any bulk import path must de-dupe against existing HamLog QSOs
-  **before** inserting, or it will create duplicate contacts.
+- **HamLog de-dupes on every insert.** Manual create and ADIF import both run a
+  duplicate check (`findDuplicateContactId`, migration 008) on `callsign` +
+  `qso_datetime_utc` to the minute + null-safe `band`/`mode` — duplicates are
+  **skipped**, not inserted, so a bulk import won't create exact-duplicate contacts.
+  The key omits the park (an n-fer's extra park record collapses as a duplicate). A
+  client-side diff before import is now optional defense-in-depth / reconciliation,
+  not a correctness requirement. See `docs/HAMLOG-INTEGRATION.md`.
 - **Back up HamLog's database before any bulk import.** No exceptions.
 - The "log to HamLog on re-spot" feature is **opt-in** and explicit. A re-spot is
   not proof of a new QSO (you can re-spot someone you worked an hour ago), so

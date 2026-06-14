@@ -4,9 +4,9 @@ services:
     container_name: pota-board
     restart: unless-stopped
     ports:
-      - "8055:8055"
+      - "8075:8075"
     environment:
-      PORT: 8055
+      PORT: 8075
       # HamLog integration (read by the /api proxy once built; blank is fine until then)
       HAMLOG_URL: ${HAMLOG_URL:-http://192.168.1.62:8050}
       HAMLOG_USER: ${HAMLOG_USER:-}

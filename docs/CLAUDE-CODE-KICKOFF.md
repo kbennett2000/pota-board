@@ -27,9 +27,9 @@ Confirm `.env` is gitignored and no secrets are tracked. Neutral default
 callsign in `public/index.html`.
 
 **Phase 1 — Serve over the LAN.**
-Get `src/server.js` + Docker serving the dashboard on port 8055. `npm install`,
+Get `src/server.js` + Docker serving the dashboard on port 8075. `npm install`,
 `docker compose build`, `docker compose up`. Verify `GET /healthz` returns ok and
-the dashboard loads at `http://192.168.1.62:8055/`. No integration yet.
+the dashboard loads at `http://192.168.1.62:8075/`. No integration yet.
 *Acceptance:* container runs, healthcheck green, board loads on the LAN.
 
 **Phase 2 — HamLog proxy (server-side).**

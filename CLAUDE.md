@@ -8,7 +8,7 @@ dashboard. The whole UI is a single self-contained HTML file (`public/index.html
 over the LAN and, once the HamLog integration lands, exposes a small `/api`
 surface that proxies authenticated calls to HamLog.
 
-Runs on the home LAN (Ubuntu server, `192.168.1.62`), Dockerized, port **8055**.
+Runs on the home LAN (Ubuntu server, `192.168.1.62`), Dockerized, port **8075**.
 Single operator (AE9S). Not multi-tenant, not internet-facing by default.
 
 ## Architecture
@@ -25,7 +25,7 @@ Single operator (AE9S). Not multi-tenant, not internet-facing by default.
   the server holds HamLog credentials (env), logs in, caches/refreshes the JWT,
   and forwards. Same-origin = **no CORS changes needed on HamLog**. This is the
   whole reason the server exists; honor it.
-- **Container:** one `node:20-alpine` image, `docker-compose.yml`, port 8055.
+- **Container:** one `node:20-alpine` image, `docker-compose.yml`, port 8075.
 
 HamLog API shapes, the Hunter Log paste format, and the POTA CSV findings are
 documented in `docs/HAMLOG-INTEGRATION.md`. Read it before touching the integration.

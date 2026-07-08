@@ -661,7 +661,7 @@ async function logRespotToHamlog(payload){
   const now=new Date();
   const body={
     date: now.toISOString().slice(0,10),
-    time: String(now.getUTCHours()).padStart(2,"0")+String(now.getUTCMinutes()).padStart(2,"0"),
+    time: String(now.getUTCHours()).padStart(2,"0")+":"+String(now.getUTCMinutes()).padStart(2,"0"),
     callsign: payload.activator,
     frequency: (parseFloat(payload.frequency)/1000).toFixed(3),
     mode: payload.mode,

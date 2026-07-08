@@ -35,7 +35,7 @@ export class HamlogError extends Error {
 export function mapContactToQso(body) {
   return {
     date: str(body.date),
-    time: str(body.time),
+    time: normalizeTime(str(body.time)),
     callsign: str(body.callsign),
     frequency: str(body.frequency),
     mode: str(body.mode),
@@ -80,6 +80,18 @@ export function validateContactBody(body) {
 }
 
 function str(v) { return v == null ? '' : String(v); }
+
+// HamLog stores QSO time colon-formatted; its toUtcDatetime only colon-fixes a
+// length-5 "HH:MM", so a bare compact "HHMM"/"HHMMSS" builds an invalid DATETIME
+// and the insert fails (500 -> our 502). Mirror HamLog's ADIF parser: expand a
+// compact time to colon form; pass anything already colon-separated (or empty,
+// or otherwise unexpected) through untouched and let HamLog validate.
+function normalizeTime(t) {
+  if (t.includes(':')) return t;
+  if (/^\d{4}$/.test(t)) return `${t.slice(0, 2)}:${t.slice(2)}`;
+  if (/^\d{6}$/.test(t)) return `${t.slice(0, 2)}:${t.slice(2, 4)}:${t.slice(4)}`;
+  return t;
+}
 
 function trimBase(url) { return String(url || '').replace(/\/+$/, ''); }
 

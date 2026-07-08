@@ -58,7 +58,17 @@ test('mapContactToQso maps rstSent->sent and rstRcvd->received', () => {
   assert.equal(out.received, '57');
   assert.equal(out.callsign, 'k6aty');
   assert.equal(out.frequency, '14.250');
+  assert.equal(out.time, '14:30'); // compact HHMM normalized to colon form
   assert.ok(!('rstSent' in out) && !('rstRcvd' in out) && !('parkRef' in out));
+});
+
+test('mapContactToQso normalizes the QSO time to colon form', () => {
+  const t = (time) => mapContactToQso({ date: 'd', callsign: 'AE9S', frequency: '7.1', time }).time;
+  assert.equal(t('1548'), '15:48');       // HHMM -> HH:MM
+  assert.equal(t('154830'), '15:48:30');  // HHMMSS -> HH:MM:SS
+  assert.equal(t('15:48'), '15:48');      // already colon-formatted, untouched
+  assert.equal(t('15:48:30'), '15:48:30');
+  assert.equal(t(''), '');                // empty stays empty (HamLog defaults it)
 });
 
 test('mapContactToQso defaults missing optionals to empty strings', () => {
@@ -140,13 +150,14 @@ test('logContact creates contact and attaches park when parkRef present', async 
     'POST /api/qsos/42/pota': { status: 201, json: { id: 7 } },
   });
   const client = createHamlogClient({ ...ENV, fetchImpl });
-  const result = await client.logContact({ date: '2026-06-13', callsign: 'K6ATY', frequency: '14.250', rstSent: '59', rstRcvd: '57', parkRef: 'US-2631' });
+  const result = await client.logContact({ date: '2026-06-13', time: '1430', callsign: 'K6ATY', frequency: '14.250', rstSent: '59', rstRcvd: '57', parkRef: 'US-2631' });
   assert.deepEqual(result, { id: 42, potaLinked: true });
   const pota = calls.find(c => c.path === '/api/qsos/42/pota');
   assert.deepEqual(pota.body, { parkId: 'US-2631', qsoType: '1' });
   const create = calls.find(c => c.path === '/api/qsos/');
   assert.equal(create.body.sent, '59');
   assert.equal(create.body.received, '57');
+  assert.equal(create.body.time, '14:30'); // colon time reaches HamLog (issue #7)
 });
 
 test('logContact skips park attach when no parkRef', async () => {

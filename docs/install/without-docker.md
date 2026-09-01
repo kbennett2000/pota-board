@@ -5,7 +5,7 @@ Docker is the easiest way to run pota-board, and it's what the
 rather run it directly with **Node.js**, you can — it's a tiny app.
 
 ## Requirements
-- **Node.js 20 or newer** — https://nodejs.org/ (the "LTS" download).
+- **Node.js 20.18 or newer** — https://nodejs.org/ (the "LTS" download).
 - A **free CARTO API key** for the map tiles (optional but recommended) —
   https://carto.com/basemaps/apikey/. Without one the maps render with an
   "API KEY REQUIRED" watermark.
@@ -22,14 +22,20 @@ Then open **http://localhost:8075**.
 
 ## Settings
 
-Run directly, the app reads its settings from **environment variables** you set in the
-shell. (`npm start` does *not* read a `.env` file — that's a Docker Compose feature.)
+Run directly, the app reads settings from a **`.env` file** in the pota-board folder,
+or from environment variables set in your shell. Copy the example to get started:
+
+```bash
+cp .env.example .env
+```
 
 | Variable | What it does |
 |---|---|
 | `CARTO_API_KEY` | Free CARTO key so the maps aren't watermarked |
 | `PORT` | Port to serve on (default `8075`) |
 | `HAMLOG_URL` / `HAMLOG_USER` / `HAMLOG_PASS` | Optional HamLog logging — see the [HamLog guide](../hamlog.md) |
+
+Then edit `.env` and run `npm start` as usual. Prefer to pass them inline instead?
 
 ```bash
 CARTO_API_KEY=cb1_xxxxxxxx PORT=9075 npm start        # macOS / Linux
@@ -43,8 +49,9 @@ set PORT=9075
 npm start
 ```
 
-To make them stick across sessions, add the `export` lines to your shell profile
-(`~/.bashrc`, `~/.zshrc`) or use Windows' **Environment Variables** dialog.
+A variable set in your shell **overrides** the same one in `.env`, so an old
+`export` left over from another session will quietly win — unset it if a `.env`
+change doesn't seem to take effect.
 
 If the key isn't set, `npm start` prints a reminder at boot and the maps fall back to
 CARTO's watermarked tiles — nothing breaks.
@@ -54,7 +61,9 @@ CARTO's watermarked tiles — nothing breaks.
   stop it. For an always-on server, Docker (with `restart: unless-stopped`) is the
   better fit.
 - HamLog logging still works the same way — set the `HAMLOG_*` variables (see the
-  [HamLog guide](../hamlog.md)) in your environment before `npm start`.
+  [HamLog guide](../hamlog.md)) in `.env` or your environment before `npm start`.
+- With no `.env` present, Node prints `.env not found. Continuing without it.` at
+  startup. That's informational — nothing is wrong.
 
 Everything else — using the board, settings, maps — is identical to the Docker
 setup. Head to the [How to use the dashboard](../usage.md) guide.

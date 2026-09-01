@@ -71,6 +71,11 @@ chase.
 Pick the map look with the **Map** dropdown (Color, Satellite, Dark) and the **+ / −
 zoom** next to it.
 
+> **Seeing an "API KEY REQUIRED" watermark?** The **Color** and **Dark** basemaps come
+> from CARTO, which now requires a free API key; **Satellite** comes from Esri and
+> doesn't. Setting it up takes about a minute — see
+> **[Configuration](../README.md#-configuration)**.
+
 ## Operator profiles
 
 Hover (or tap) any activator's callsign to see a quick **profile card** pulled from

@@ -14,6 +14,7 @@
 import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { publicConfig } from './config.js';
 import { createHamlogClient } from './hamlog.js';
 import { hamlogRouter } from './routes/hamlog.js';
 
@@ -26,6 +27,14 @@ app.use(express.json({ limit: '256kb' }));
 
 // Liveness probe (used by docker-compose healthcheck)
 app.get('/healthz', (_req, res) => res.json({ ok: true, service: 'pota-board' }));
+
+// Public browser config. The dashboard builds CARTO tile URLs itself, so the
+// basemap key has to reach the browser — it is public by nature. Only values
+// that are safe to publish belong in publicConfig(); never a HamLog credential.
+app.get('/api/config', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json(publicConfig(process.env));
+});
 
 // HamLog proxy: holds the JWT server-side; browser calls same-origin /api/hamlog/*.
 // Endpoints handle the unconfigured case themselves (503), so mounting is unconditional.
@@ -41,4 +50,7 @@ app.use(express.static(join(__dirname, '..', 'public'), { extensions: ['html'] }
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`pota-board listening on http://0.0.0.0:${PORT}`);
+  if (!publicConfig(process.env).cartoKey) {
+    console.log('CARTO_API_KEY not set — the Color and Dark basemaps will be watermarked. Free key: https://carto.com/basemaps/apikey/');
+  }
 });

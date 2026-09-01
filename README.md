@@ -31,10 +31,53 @@ written step-by-step, no experience assumed:
 | 🐧 **Linux** | **[Install on Linux →](docs/install/linux.md)** |
 
 In short: install **Docker**, download this project, run **`docker compose up -d`**,
-and open **http://localhost:8075**. That's it.
+and open **http://localhost:8075**.
+
+> **One extra minute:** the maps need a free CARTO API key. Without it the board
+> works fine, but the maps are stamped with a watermark — see
+> **[Configuration](#-configuration)** below.
 
 > Prefer to run it directly with Node.js instead of Docker?
 > See **[Run without Docker](docs/install/without-docker.md)**.
+
+---
+
+## 🔑 Configuration
+
+pota-board reads its settings from a **`.env`** file sitting next to
+`docker-compose.yml`. Copy the example and edit it:
+
+```bash
+cp .env.example .env
+```
+
+| Setting | What it is |
+|---|---|
+| `CARTO_API_KEY` | Free key for the map tiles — see below |
+| `PORT` | Port the dashboard is served on (default `8075`) |
+| `HAMLOG_URL` | Your HamLog address, if you use it — [HamLog guide](docs/hamlog.md) |
+| `HAMLOG_USER` | Your HamLog username |
+| `HAMLOG_PASS` | Your HamLog password |
+
+Then apply the changes with **`docker compose up -d`**.
+
+### The map key
+
+CARTO, which supplies the **Color** and **Dark** basemaps, now requires an API key.
+Without one the maps still work — they're just stamped with an "API KEY REQUIRED"
+watermark. (The **Satellite** basemap comes from Esri and needs no key.)
+
+Getting one takes about a minute and needs no account:
+
+1. Request a key at **[carto.com/basemaps/apikey](https://carto.com/basemaps/apikey/)**.
+2. Put it in your `.env`, e.g. `CARTO_API_KEY=cb1_your_key_here`.
+3. Run `docker compose up -d`, then **force-refresh** your browser — both it and
+   CARTO's CDN cache map tiles, so an old watermarked one can linger for a moment.
+
+The free tier covers 5,000,000 tiles a month, far more than a personal board will
+use. The key is read from `.env`, which is gitignored and kept out of the Docker
+image, so it never ends up committed. Do keep the CARTO and OpenStreetMap
+attribution visible on your maps — that's what the free tier is in exchange for.
 
 ---
 
@@ -91,6 +134,9 @@ details (and how to connect it) are in the **[HamLog guide](docs/hamlog.md)**.
 - A tiny **Node/Express** server (`src/server.js`) serves it and provides the small,
   same-origin `/api/hamlog` proxy so your HamLog password never reaches the browser.
 - Spot data comes straight from **[pota.app](https://pota.app)**'s public API.
+- Map tiles come from **[CARTO](https://carto.com/basemaps/)** (Color, Dark, needs a
+  free key) and **Esri** (Satellite); [Leaflet](https://leafletjs.com/) draws the
+  zoomable maps.
 - Ships as one small Docker image on port **8075**.
 
 Developer notes live in [`docs/HAMLOG-INTEGRATION.md`](docs/HAMLOG-INTEGRATION.md).

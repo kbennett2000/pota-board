@@ -76,7 +76,7 @@
   body.light .addspot{color:var(--phos); background:rgba(31,157,87,.08)}
 
   .settings{max-width:1500px; margin:0 auto; overflow:hidden; max-height:0; transition:max-height .25s ease}
-  .settings.open{max-height:460px}
+  .settings.open{max-height:540px}
   .sbox{margin-top:12px; padding:14px 16px; background:var(--panel); border:1px solid var(--line); border-radius:8px;
     display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
   .field label{display:block; font-family:var(--sans); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px}
@@ -288,6 +288,7 @@
       </div>
       <div class="note">
         <b>Band, Mode, Program, QRT &amp; Hunted</b> are the dropdowns up top — click any pill to change it. Counts next to each option are live from the current spot feed. Tap any park map for a zoom/pan view.
+        <span id="cartoNote" hidden><br><b>Maps watermarked?</b> The Color and Dark basemaps need a free CARTO key. Grab one at <a href="https://carto.com/basemaps/apikey/" target="_blank" rel="noopener">carto.com/basemaps/apikey</a>, set <code>CARTO_API_KEY</code> in your <code>.env</code>, and restart. Satellite needs no key.</span>
       </div>
     </div>
   </div>
@@ -396,11 +397,20 @@ const localTime=ms=>new Date(ms).toLocaleTimeString([], {hour:"numeric",minute:"
 const TZ=(()=>{ try{ return new Intl.DateTimeFormat([], {timeZoneName:"short"}).formatToParts(new Date()).find(p=>p.type==="timeZoneName")?.value||""; }catch(e){ return ""; } })();
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+/* ---- basemap key (CARTO raster tiles need one; the server hands it over) ---- */
+let cartoKey="", cartoKeyP=null;
+const cartoQS=()=>cartoKey?`?key=${encodeURIComponent(cartoKey)}`:"";
+/* One-shot same-origin read. load() awaits it, so the key always lands before the
+   first tile paints. Never throws — no key just means CARTO's watermark. */
+function mapKeyReady(){ return cartoKeyP || (cartoKeyP=
+  fetch("/api/config").then(r=>r.ok?r.json():{}).then(c=>{ cartoKey=c.cartoKey||""; })
+    .catch(()=>{}).then(()=>{ const n=el("cartoNote"); if(n) n.hidden=!!cartoKey; })); }
+
 function project(lon,lat,z){ const s=256*2**z; const x=(lon+180)/360*s; const sin=Math.sin(lat*Math.PI/180); const y=(0.5-Math.log((1+sin)/(1-sin))/(4*Math.PI))*s; return {x,y}; }
 function tileURL(x,y,z){
   if(cfg.basemap==="satellite") return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
-  if(cfg.basemap==="dark")      return `https://a.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}@2x.png`;
-  return `https://a.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}@2x.png`;
+  if(cfg.basemap==="dark")      return `https://a.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}@2x.png${cartoQS()}`;
+  return `https://a.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}@2x.png${cartoQS()}`;
 }
 function tilesFor(lon,lat,V,z){
   const T=256, n=2**z; const {x:wx,y:wy}=project(lon,lat,z); const ox=wx-V/2, oy=wy-V/2;
@@ -516,6 +526,7 @@ function recompute(){ spots=compute(); render(); updateOverview(); }
 
 async function load(){
   el("sdot").className="dot load"; el("status").textContent="Refreshing…";
+  await mapKeyReady();
   const jobs=[ fetch(SPOTS,{cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject(new Error("spots HTTP "+r.status))) ];
   jobs.push( cfg.call ? fetch(HUNTED(cfg.call),{cache:"no-store"}).then(r=>r.ok?r.json():[]).catch(()=>null) : Promise.resolve([]) );
   try{
@@ -580,10 +591,11 @@ function ensureLeaflet(){ if(window.L) return Promise.resolve(); if(leafletP) re
     const js=document.createElement("script"); js.src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"; js.onload=()=>res(); js.onerror=()=>rej(new Error("leaflet")); document.head.appendChild(js); });
   return leafletP;
 }
+const ATTR_CARTO='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, © <a href="https://carto.com/attributions">CARTO</a>';
 function leafletLayer(bm){ const sub={subdomains:"abcd",maxZoom:19};
-  if(bm==="satellite") return L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"© Esri"});
-  if(bm==="dark") return L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",{...sub,attribution:"© OSM, © CARTO"});
-  return L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",{...sub,attribution:"© OSM, © CARTO"});
+  if(bm==="satellite") return L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:'© <a href="https://www.esri.com">Esri</a>'});
+  if(bm==="dark") return L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png${cartoQS()}`,{...sub,attribution:ATTR_CARTO});
+  return L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png${cartoQS()}`,{...sub,attribution:ATTR_CARTO});
 }
 async function openMap(d){
   const lat=+d.lat, lon=+d.lon;
@@ -830,7 +842,7 @@ el("zoomIn").addEventListener("click", ()=>setZoom(cfg.mapZoom+1));
   el("overview").classList.toggle("collapsed",!cfg.overviewOpen); el("ovToggle").textContent=cfg.overviewOpen?"▾":"▸";
 })();
 
-countdown=cfg.interval; load(); setInterval(tick,1000);
+countdown=cfg.interval; mapKeyReady(); load(); setInterval(tick,1000);
 </script>
 </body>
 </html>

@@ -30,6 +30,13 @@ function json(route, body) {
 }
 
 async function main() {
+  // The committed screenshots go in a public repo — a missing key would bake
+  // CARTO's "API KEY REQUIRED" watermark into every map shot.
+  if (!process.env.CARTO_API_KEY) {
+    console.error('CARTO_API_KEY not set — basemaps would be watermarked in the committed screenshots. Export it and re-run.');
+    process.exit(1);
+  }
+
   // 1. boot the real server
   const server = spawn('node', ['src/server.js'], {
     cwd: root, env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore',

@@ -30,7 +30,37 @@ That's the only thing you have to install.
    Move the resulting `pota-board-main` folder somewhere you'll remember, like your
    **Documents** folder.
 
-## Step 3 — Start it
+## Step 3 — Add your free map key
+
+The **Color** and **Dark** maps come from **CARTO**, which now requires a free API
+key. Without one the board still works — every map is just stamped with an
+"API KEY REQUIRED" watermark. (The **Satellite** map comes from Esri and needs no key.)
+
+1. Go to **https://carto.com/basemaps/apikey/** and request a key. It's free, takes
+   about a minute, and needs no account. You'll get something like `cb1_xxxxxxxx`.
+2. Open the **Terminal** app (**⌘ + Space**, type *Terminal*, press Enter). Type
+   `cd ` (with a space), then **drag the pota-board folder** from Finder into the
+   Terminal window and press **Enter**.
+3. Run these two commands:
+
+   ```bash
+   cp .env.example .env
+   open -e .env
+   ```
+
+4. TextEdit opens the file. Find the line reading `CARTO_API_KEY=` and paste your key
+   straight after the `=`, no spaces:
+
+   ```
+   CARTO_API_KEY=cb1_xxxxxxxx
+   ```
+
+5. Save with **⌘ + S** and close TextEdit.
+
+> **Want to skip this for now?** You can — the board runs fine without a key, the maps
+> just carry a watermark. Come back and add it whenever you like.
+
+## Step 4 — Start it
 
 1. Open the **Terminal** app (press **⌘ + Space**, type *Terminal*, press Enter).
 2. Type `cd ` (with a space), then **drag the pota-board folder** from Finder into
@@ -44,7 +74,7 @@ That's the only thing you have to install.
 4. The first time, Docker downloads and builds the app (a minute or two). When it
    finishes you'll see it report that the `pota-board` container started.
 
-## Step 4 — Open the dashboard
+## Step 5 — Open the dashboard
 
 Open your web browser and go to:
 
@@ -54,7 +84,7 @@ You should see the spot board:
 
 ![The pota-board dashboard](../screenshots/01-board-dark.png)
 
-## Step 5 — Set your callsign
+## Step 6 — Set your callsign
 
 Click the **⚙ gear** (top-right) and type your callsign in **Your callsign**. It's
 saved in your browser — it is *not* sent anywhere or stored in the app. Now the
@@ -67,7 +97,7 @@ saved in your browser — it is *not* sent anywhere or stored in the app. Now th
 
 ## Everyday commands
 
-In Terminal, pointed at the pota-board folder (Step 3):
+In Terminal, pointed at the pota-board folder (Step 4):
 
 | To… | Run |
 |---|---|
@@ -79,11 +109,15 @@ In Terminal, pointed at the pota-board folder (Step 3):
 
 - **"docker: command not found" / nothing happens** — Docker Desktop isn't running.
   Open it from Applications and wait until the menu-bar whale says it's running,
-  then try Step 3 again.
+  then try Step 4 again.
 - **The page won't load / "port is already allocated"** — something else on your Mac
   is using port 8075. Open `docker-compose.yml` in the pota-board folder with
   **TextEdit**, change the line `- "8075:8075"` to `- "9075:8075"`, save, run
   `docker compose up -d` again, and open **http://localhost:9075** instead.
+- **The maps say "API KEY REQUIRED"** — the free CARTO map key isn't set. Add it to
+  `.env` (Step 3) and run `docker compose up -d` again, then force-refresh the page
+  with **⌘ + Shift + R** — map tiles are cached by your browser *and* by CARTO, so an
+  old watermarked one can linger for a moment.
 - **It loads but shows no spots** — that usually means no internet, or the POTA feed
   is briefly down. The board retries automatically.
 

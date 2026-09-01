@@ -377,6 +377,8 @@ const MODE_PHONE=new Set(["SSB","USB","LSB","AM","FM","FMN","DV","DIGITALVOICE",
 const MODE_DATA =new Set(["FT8","FT4","RTTY","PSK","PSK31","PSK63","JS8","JT65","JT9","MFSK","OLIVIA","DOMINOEX","HELL","THOR","SSTV","PACKET","ARDOP","VARA","JT6M","DIGITAL","DATA"]);
 
 const el=id=>document.getElementById(id);
+/* Callsign shows in two places — the header and the tab title. Set both here. */
+function setCall(c){ cfg.call=c; el("opcall").textContent=c||"—"; document.title=`POTA Dashboard — ${c||"POTA"}`; }
 let lastGood=[], spots=[], countdown=0;
 const huntedIds=new Set(), huntedAR=new Set();
 const cfg={ call:"N0CALL", band:"20M", mode:"PHONE", program:"us+ca", qrt:"hide", hunted:"hide",
@@ -806,7 +808,7 @@ el("ovToggle").addEventListener("click", ()=>{ cfg.overviewOpen=!cfg.overviewOpe
 const dirArrow=()=> cfg.sortDir==="asc"?"↑":"↓";
 const defaultDir=f=> f==="time"?"desc":"asc";
 function readCfg(reload){
-  cfg.call=(el("callsign").value||"").trim().toUpperCase(); el("opcall").textContent=cfg.call||"—"; store.set("pota_call",cfg.call);
+  setCall((el("callsign").value||"").trim().toUpperCase()); store.set("pota_call",cfg.call);
   cfg.interval=Math.max(10,parseInt(el("interval").value)||30); store.set("pota_interval",cfg.interval);
   cfg.exCalls=el("exCalls").value.split(",").map(x=>baseCall(x.trim())).filter(Boolean); store.set("pota_exCalls",el("exCalls").value);
   cfg.exRefs=el("exRefs").value.split(",").map(x=>x.trim().toUpperCase()).filter(Boolean); store.set("pota_exRefs",el("exRefs").value);
@@ -829,7 +831,7 @@ el("zoomIn").addEventListener("click", ()=>setZoom(cfg.mapZoom+1));
 
 (function restore(){
   const g=(k,d)=>{const v=store.get(k);return v===null?d:v;};
-  const c=store.get("pota_call"); if(c){cfg.call=c; el("callsign").value=c; el("opcall").textContent=c;}
+  const c=store.get("pota_call"); if(c){ el("callsign").value=c; setCall(c); }
   const iv=store.get("pota_interval"); if(iv){cfg.interval=+iv; el("interval").value=iv;}
   const ec=store.get("pota_exCalls"); if(ec){el("exCalls").value=ec; cfg.exCalls=ec.split(",").map(x=>baseCall(x.trim())).filter(Boolean);}
   const er=store.get("pota_exRefs"); if(er){el("exRefs").value=er; cfg.exRefs=er.split(",").map(x=>x.trim().toUpperCase()).filter(Boolean);}
